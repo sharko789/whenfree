@@ -7,5 +7,9 @@ requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.139.2",
     "pydantic>=2.13.4",
-    "uvicorn>=0.51.0",
+    "uvicorn[standard]>=0.51.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/sharko789/whenfree.git"
+Favicon = "https://sharko789.github.io/favicon-generator/?icon=event_available&style=rounded&bg=1C2144&fg=F2B85C&radius=200&scale=1.1"
