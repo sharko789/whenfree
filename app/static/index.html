@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>WhenFree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<div id="page" class="page-narrow">
+
+  <div class="topbar">
+    <div class="brand"><div class="mark"></div><h1>When<span>Free</span></h1></div>
+    <div class="tagline">find the hour everyone's actually free</div>
+  </div>
+
+  <div class="landing-hero">
+    <h2>Everyone's calendar, one grid.</h2>
+    <p>Make a grid of dates and times and share the link. Everyone marks when they're free, and it lights up where you overlap.</p>
+  </div>
+
+  <div class="card cal-card">
+    <h3><span class="eyebrow-num">New meeting</span></h3>
+
+    <label for="c-title">Meeting name</label>
+    <input type="text" id="c-title" placeholder="e.g. Team retro, Camping trip" required>
+
+    <label>Dates to consider</label>
+    <div class="cal-header">
+      <button class="cal-nav" id="cal-prev" type="button" aria-label="Back one week">&larr;</button>
+      <div class="cal-month" id="cal-month-label"></div>
+      <button class="cal-nav" id="cal-next" type="button" aria-label="Forward one week">&rarr;</button>
+    </div>
+    <div id="cal-slot"></div>
+    <div class="cal-hint">Click a date, or click and drag across several, to add or remove them. Past dates are locked. Use the arrows to scroll a week at a time.</div>
+
+    <div class="row2">
+      <div>
+        <label for="c-start">Earliest hour</label>
+        <input type="number" id="c-start" min="0" max="23" value="9" inputmode="numeric">
+        <div class="field-hint">0&ndash;23, 24h clock</div>
+      </div>
+      <div>
+        <label for="c-end">Latest hour</label>
+        <input type="number" id="c-end" min="1" max="24" value="18" inputmode="numeric">
+        <div class="field-hint">1&ndash;24, 24h clock</div>
+      </div>
+    </div>
+
+    <div class="err" id="c-err"></div>
+    <button class="btn-primary btn-block" id="c-submit">Create meeting &amp; get a link</button>
+  </div>
+
+  <footer>Anyone with the link can view the meeting or add their own availability.</footer>
+</div>
+<script src="/js/common.js"></script>
+<script src="/js/index.js"></script>
+</body>
+</html>

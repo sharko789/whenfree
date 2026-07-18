@@ -1,0 +1,9 @@
+services:
+  whenfree:
+    build: .
+    container_name: whenfree
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

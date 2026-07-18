@@ -1,0 +1,11 @@
+[project]
+name = "whenfree"
+version = "0.1.0"
+description = "A clone of when2meet, fully functional"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.139.2",
+    "pydantic>=2.13.4",
+    "uvicorn>=0.51.0",
+]

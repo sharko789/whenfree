@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>WhenFree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<div id="page">
+
+  <div class="topbar">
+    <div class="brand"><div class="mark"></div><h1>When<span>Free</span></h1></div>
+    <a class="back-link" href="/" style="margin:0;">&larr; New meeting</a>
+  </div>
+
+  <div class="meeting-header">
+    <div class="meeting-title"><h2 id="meeting-title-text">Loading…</h2></div>
+  </div>
+
+  <div class="share-row">
+    <label for="share-link">Share this meeting</label>
+    <div class="share-link-row">
+      <input type="text" id="share-link" class="mono" readonly value="">
+      <button class="btn-ghost" id="copy-link" type="button">Copy link</button>
+    </div>
+  </div>
+
+  <div class="panels">
+    <section class="panel panel-own">
+      <h3>Your availability</h3>
+      <div id="own-panel-body"><div class="loading">Loading…</div></div>
+    </section>
+    <section class="panel panel-group">
+      <h3>Group availability</h3>
+      <div class="participant-list" id="participant-list"></div>
+      <div id="group-panel-body"></div>
+    </section>
+  </div>
+
+  <footer>Anyone with this link can view the meeting or add their own availability.</footer>
+</div>
+<div class="tip" id="tip"></div>
+<script src="/js/common.js"></script>
+<script src="/js/meeting.js"></script>
+</body>
+</html>
