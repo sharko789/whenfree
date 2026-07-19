@@ -215,7 +215,7 @@
         });
       });
     }
-    const highestCount = Math.max(...Object.values(counts));
+    const highestCount = Math.max(0, ...Object.values(counts));
 
     const outer = document.createElement("div");
     outer.className = "tf-grid-outer" + (opts.editable ? "" : " heatmode");
@@ -313,7 +313,10 @@
     } else {
       attachHeatHandlers(blocksWrap, counts);
 
-      const legendOpacities = Array.from({ length: highestCount + 1 }, (_, i) => i / highestCount);
+      const legendOpacities = Array.from(
+        { length: highestCount + 1 },
+        (_, i) => (highestCount ? i / highestCount : 0)
+      );
       const legend = document.createElement("div");
       legend.className = "legend"; legend.innerHTML = `0/${participantCount} free<span class="legend-scale" style="width:${legendOpacities.length * 25 + "px"};">${legendOpacities.map(t => `<div style="background:var(--hot);opacity:${Math.pow(t, 1.5)}"></div>`).join("")}</span>${highestCount}/${participantCount} free`;
       container.appendChild(legend);
