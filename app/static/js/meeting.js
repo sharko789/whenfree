@@ -298,9 +298,13 @@
         getKey: (cell) => cell.dataset.key,
         isSelected: (key) => selectedCells.has(key),
         snapshot: () => new Set(selectedCells),
-        onChange: (key, sel, cell) => {
+        onChange: (key, sel, cell, preview, edges, displaySel) => {
           if (sel) selectedCells.add(key); else selectedCells.delete(key);
-          cell.classList.toggle("on", sel);
+          cell.classList.toggle("on", displaySel);
+          cell.classList.toggle("pv-top", preview && edges.top);
+          cell.classList.toggle("pv-right", preview && edges.right);
+          cell.classList.toggle("pv-bottom", preview && edges.bottom);
+          cell.classList.toggle("pv-left", preview && edges.left);
         },
         onCommit: opts.onCommit,
       });

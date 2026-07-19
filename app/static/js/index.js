@@ -100,9 +100,10 @@
       getKey: (cell) => cell.dataset.date,
       isSelected: (key) => state.createDates.has(key),
       snapshot: () => new Set(state.createDates),
-      onChange: (key, sel, cell) => {
+      onChange: (key, sel, cell, preview, edges, displaySel) => {
         if (sel) state.createDates.add(key); else state.createDates.delete(key);
-        cell.classList.toggle("selected", sel);
+        cell.classList.toggle("selected", displaySel);
+        cell.classList.toggle("selected-preview", preview);
       },
     });
   }

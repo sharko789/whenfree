@@ -85,20 +85,51 @@ window.WF = (function () {
   // the selection.
   function enableRubberBand(container, selector, opts) {
     let dragging = false, startRow = 0, startCol = 0, target = false, original = new Set();
+    let lastRow = 0, lastCol = 0;
     const signal = opts.signal;
 
     function cellsIn() { return container.querySelectorAll(selector); }
 
-    function applyRect(curRow, curCol) {
+    // `finalize` is true only on the very last pass (mouseup/touchend): at
+    // that point the rectangle's cells should commit to their real (non-
+    // preview) styling. During the drag itself, only cells *inside* the
+    // current rectangle are "preview" - cells outside it are just reverting
+    // to whatever they already were, and shouldn't flicker translucent.
+    function applyRect(curRow, curCol, finalize) {
       const r0 = Math.min(startRow, curRow), r1 = Math.max(startRow, curRow);
       const c0 = Math.min(startCol, curCol), c1 = Math.max(startCol, curCol);
-      cellsIn().forEach((cell) => {
-        if (opts.isDisabled && opts.isDisabled(cell)) return;
+
+      const cells = Array.from(cellsIn()).filter(
+        (cell) => !(opts.isDisabled && opts.isDisabled(cell))
+      );
+
+      const previewKeys = new Set();
+      cells.forEach((cell) => {
+        const row = +cell.dataset.row, col = +cell.dataset.col;
+        const inside = row >= r0 && row <= r1 && col >= c0 && col <= c1;
+        if (inside && !finalize) previewKeys.add(row + "," + col);
+      });
+
+      cells.forEach((cell) => {
         const row = +cell.dataset.row, col = +cell.dataset.col;
         const key = opts.getKey(cell);
         const inside = row >= r0 && row <= r1 && col >= c0 && col <= c1;
         const newSel = inside ? target : original.has(key);
-        opts.onChange(key, newSel, cell);
+        const preview = inside && !finalize;
+        // While dragging, the *fill* stays whatever it already was - only the
+        // border communicates "this cell is inside the pending rectangle".
+        // On finalize, the fill catches up to the real new value.
+        const displaySel = preview ? original.has(key) : newSel;
+        let edges;
+        if (preview) {
+          edges = {
+            top: !previewKeys.has((row - 1) + "," + col),
+            bottom: !previewKeys.has((row + 1) + "," + col),
+            left: !previewKeys.has(row + "," + (col - 1)),
+            right: !previewKeys.has(row + "," + (col + 1)),
+          };
+        }
+        opts.onChange(key, newSel, cell, preview, edges, displaySel);
       });
     }
 
@@ -107,17 +138,22 @@ window.WF = (function () {
       dragging = true;
       startRow = +cell.dataset.row;
       startCol = +cell.dataset.col;
+      lastRow = startRow;
+      lastCol = startCol;
       target = !opts.isSelected(opts.getKey(cell));
       original = opts.snapshot();
-      applyRect(startRow, startCol);
+      applyRect(startRow, startCol, false);
     }
     function move(cell) {
       if (!dragging || !cell) return;
-      applyRect(+cell.dataset.row, +cell.dataset.col);
+      lastRow = +cell.dataset.row;
+      lastCol = +cell.dataset.col;
+      applyRect(lastRow, lastCol, false);
     }
     function end() {
       if (dragging) {
         dragging = false;
+        applyRect(lastRow, lastCol, true); // finalize: lock in the rectangle's cells, drop preview styling
         if (opts.onCommit) opts.onCommit();
       }
     }

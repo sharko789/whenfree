@@ -96,6 +96,7 @@ td.cal-day.pad{background:transparent;color:transparent;cursor:default;}
 td.cal-day.disabled{color:var(--ink-faint);opacity:.35;cursor:not-allowed;background:var(--bg-elev);}
 td.cal-day.today:not(.selected){box-shadow:inset 0 0 0 1px var(--amber-soft);}
 td.cal-day.selected{background:var(--amber);color:#191300;font-weight:600;}
+td.cal-day.selected-preview{box-shadow: inset 0 0 0 2px var(--danger);}
 .cal-hint{color:var(--ink-faint);font-size:12px;margin-top:10px;}
 
 /* meeting page */
@@ -147,6 +148,10 @@ td.cal-day.selected{background:var(--amber);color:#191300;font-weight:600;}
 .tf-cell.b-last-row{border-bottom:1px solid var(--line-strong);}
 .tf-cell.b-last-col{border-right:1px solid var(--line-strong);}
 .tf-cell.on{background:var(--amber);}
+.tf-cell.pv-top{border-top:2px solid var(--danger);}
+.tf-cell.pv-bottom{border-bottom:2px solid var(--danger);}
+.tf-cell.pv-left{border-left:2px solid var(--danger);}
+.tf-cell.pv-right{border-right:2px solid var(--danger);}
 .tf-grid-outer.heatmode .tf-cell{cursor:default;}
 
 .legend{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:11.5px;color:var(--ink-faint);}
