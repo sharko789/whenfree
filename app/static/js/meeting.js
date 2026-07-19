@@ -11,6 +11,7 @@
   let currentPassword = "";      // sent with every save for that name
   let selectedCells = new Set(); // working (auto-saved) selection for currentName
   let ownRubberBandController = null;
+  let participantListController = null;
 
   const titleText = document.getElementById("meeting-title-text");
   const shareLinkInput = document.getElementById("share-link");
@@ -58,29 +59,27 @@
 
     while (participantListEl.scrollWidth > participantListEl.clientWidth && names.length > 0) {
       hiddenNames.unshift(names.pop());
-
       const remaining = total - names.length;
-
       participantListEl.innerHTML =
         `<b>${label}</b> ${names.join(", ")}${remaining ? ` <span class="others-tip">and ${remaining} others</span>` : ""}`;
     }
 
+    if (participantListController) participantListController.abort();
+    participantListController = new AbortController();
+    const signal = participantListController.signal;
+
     participantListEl.addEventListener("mousemove", (e) => {
       const others = e.target.closest(".others-tip");
-
-      if (!others) {
-        return;
-      }
-
+      if (!others) return;
       tipEl.innerHTML = hiddenNames.map(name => `<div class="hidden-name">${name}</div>`).join("");
       tipEl.style.left = (e.clientX + 12) + "px";
       tipEl.style.top = (e.clientY + 14) + "px";
       tipEl.style.display = "block";
-    });
+    }, { signal });
 
     participantListEl.addEventListener("mouseleave", () => {
       tipEl.style.display = "none";
-    });
+    }, { signal });
   }
 
   /* ---------- left panel: name entry, then editable grid ---------- */
