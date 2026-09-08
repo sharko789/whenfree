@@ -1,8 +1,11 @@
+import asyncio
 import json
+import logging
+import os
 import random
 import sqlite3
 import time
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 from typing import Dict, List
 
@@ -18,6 +21,28 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 ID_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no ambiguous 0/O/1/I/L
 ID_LENGTH = 8
+
+DEFAULT_EXPIRE_DAYS = 180
+EXPIRE_DAYS = 0  # filled in at startup
+
+
+def parse_expire_days() -> int:
+    # Unset -> default. Explicitly empty or negative -> disabled (0).
+    # Anything non-integer -> warn and fall back to the default.
+    raw = os.environ.get("WHENFREE_EXPIRE_DAYS")
+    if raw is None:
+        return DEFAULT_EXPIRE_DAYS
+    raw = raw.strip()
+    if raw == "":
+        return 0
+    try:
+        return max(int(raw), 0)
+    except ValueError:
+        logging.warning(
+            "WHENFREE_EXPIRE_DAYS=%r is not an integer, using default %d",
+            raw, DEFAULT_EXPIRE_DAYS,
+        )
+        return DEFAULT_EXPIRE_DAYS
 
 
 def gen_id(n: int = ID_LENGTH) -> str:
@@ -64,6 +89,33 @@ def init_db():
         conn.commit()
 
 
+def purge_expired():
+    # Deletes meetings past their expiry window (and their availability rows).
+    # Two-step explicit delete because we don't set PRAGMA foreign_keys, so
+    # ON DELETE CASCADE wouldn't fire. Runs at startup and again via a recurring
+    # background task; the purge count is logged only when >0 to keep logs quiet.
+    if EXPIRE_DAYS <= 0:
+        return
+    cutoff = int(time.time()) - EXPIRE_DAYS * 86400
+    with get_conn() as conn:
+        expired_ids = [
+            r["id"]
+            for r in conn.execute(
+                "SELECT id FROM meetings WHERE created_at < ?", (cutoff,)
+            ).fetchall()
+        ]
+        if not expired_ids:
+            return
+        placeholders = ",".join("?" * len(expired_ids))
+        conn.execute(
+            f"DELETE FROM availability WHERE meeting_id IN ({placeholders})",
+            expired_ids,
+        )
+        conn.execute(f"DELETE FROM meetings WHERE id IN ({placeholders})", expired_ids)
+        conn.commit()
+    logging.info("Purged %d expired meeting(s).", len(expired_ids))
+
+
 # start/end are whole hours only (0-24), stored as minutes-from-midnight
 # (0, 60, 120, ... 1440) so the rest of the schema doesn't need to change.
 class MeetingCreate(BaseModel):
@@ -83,12 +135,45 @@ class AvailabilityIn(BaseModel):
     password: str = Field(default="", max_length=100)
 
 
-app = FastAPI(title="WhenFree API")
+class AvailabilityDelete(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    password: str = Field(default="", max_length=100)
 
 
-@app.on_event("startup")
-def on_startup():
+async def _purge_loop():
+    # Re-runs the purge roughly once a day so we don't rely on the process
+    # being restarted. Timed from process start (not wall-clock midnight), and
+    # no catch-up if the process was down across the run window - good enough
+    # for best-effort retention. The purge itself runs off the event loop since
+    # it does blocking sqlite.
+    while True:
+        await asyncio.sleep(86400)
+        try:
+            await asyncio.to_thread(purge_expired)
+        except Exception:
+            logging.exception("Daily purge failed")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global EXPIRE_DAYS
+    EXPIRE_DAYS = parse_expire_days()
     init_db()
+    purge_expired()
+
+    # Best-effort daily re-purge; off when expiry is disabled.
+    task = None
+    if EXPIRE_DAYS > 0:
+        task = asyncio.create_task(_purge_loop())
+    app.state.purge_task = task
+
+    yield
+
+    if task:
+        task.cancel()
+
+
+app = FastAPI(title="WhenFree API", lifespan=lifespan)
 
 
 @app.get("/api/health")
@@ -194,6 +279,41 @@ def set_availability(meeting_id: str, payload: AvailabilityIn):
             """,
             (meeting_id, name, json.dumps(payload.cells), effective_password, int(time.time())),
         )
+        conn.commit()
+        return meeting_payload(conn, meeting_id)
+
+
+# Self-service deletion: a participant removes their own entry (name + the
+# password if that name is protected). Returns the recomputed meeting state,
+# same as the POST endpoint, so the frontend updates in one round trip.
+@app.delete("/api/meetings/{meeting_id}/availability")
+def delete_availability(meeting_id: str, payload: AvailabilityDelete):
+    meeting_id = meeting_id.strip().upper()
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(400, "Name is required.")
+    password = payload.password.strip()
+
+    with get_conn() as conn:
+        meeting = conn.execute("SELECT id FROM meetings WHERE id=?", (meeting_id,)).fetchone()
+        if not meeting:
+            raise HTTPException(404, "No meeting found with that code.")
+
+        existing = conn.execute(
+            "SELECT password FROM availability WHERE meeting_id=? AND name=?",
+            (meeting_id, name),
+        ).fetchone()
+        if not existing:
+            raise HTTPException(404, "No entry found for that name.")
+
+        # Same protection check as set_availability.
+        if existing["password"] and password != existing["password"]:
+            raise HTTPException(
+                403,
+                "That name is password-protected. Enter the matching password to edit it.",
+            )
+
+        conn.execute("DELETE FROM availability WHERE meeting_id=? AND name=?", (meeting_id, name))
         conn.commit()
         return meeting_payload(conn, meeting_id)
 

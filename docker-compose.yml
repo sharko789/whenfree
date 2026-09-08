@@ -6,4 +6,7 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
+    # environment:
+    #   # Days before meetings are auto-purged (default 180; 0 disables).
+    #   - WHENFREE_EXPIRE_DAYS=180
     restart: unless-stopped

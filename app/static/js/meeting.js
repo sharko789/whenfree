@@ -162,9 +162,23 @@
     ownPanelBody.innerHTML = "";
     ownPanelBody.classList.remove("own-panel-body-login");
 
+    const introRow = document.createElement("div");
+    introRow.style.display = "flex";
+    introRow.style.alignItems = "baseline";
+    introRow.style.justifyContent = "space-between";
+    introRow.style.gap = "10px";
+
     const intro = document.createElement("div");
     intro.className = "participant-list";
-    intro.innerHTML = "Editing availability for <b>" + WF.escapeHtml(currentName);
+    intro.innerHTML = "Editing availability for <b>" + WF.escapeHtml(currentName) + "</b>";
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "back-link";
+    delBtn.style.color = "var(--danger)";
+    delBtn.textContent = "Delete my entry";
+
+    introRow.append(intro, delBtn);
 
     const gridWrap = document.createElement("div");
     gridWrap.className = "grid-wrap";
@@ -173,7 +187,9 @@
     status.className = "hint";
     status.id = "save-status";
 
-    ownPanelBody.append(intro, gridWrap, status);
+    ownPanelBody.append(introRow, gridWrap, status);
+
+    delBtn.addEventListener("click", () => deleteMyEntry(delBtn, status));
 
     if (ownRubberBandController) ownRubberBandController.abort();
     ownRubberBandController = new AbortController();
@@ -346,6 +362,32 @@
       cell.addEventListener("click", (e) => show(cell, e.clientX, e.clientY));
     });
     container.addEventListener("mouseleave", hide);
+  }
+
+  /* ---------- self-service deletion ---------- */
+  // Removes the current participant's entry entirely (name + cells vanish
+  // for everyone - that's the point of self-service deletion, not
+  // anonymization). The password field from the identity step is reused.
+  async function deleteMyEntry(btn, status) {
+    if (!window.confirm("This removes your name and marks from the group. It cannot be undone.")) return;
+    btn.disabled = true;
+    if (status) { status.style.color = "var(--ink-faint)"; status.textContent = "Deleting…"; }
+    try {
+      meeting = await WF.api("/meetings/" + meetingId + "/availability", {
+        method: "DELETE",
+        body: JSON.stringify({ name: currentName, password: currentPassword }),
+      });
+      if (ownRubberBandController) ownRubberBandController.abort();
+      currentName = "";
+      currentPassword = "";
+      selectedCells = new Set();
+      renderParticipantList();
+      renderGroupPanel();
+      renderOwnPanelNameForm();
+    } catch (e) {
+      if (status) { status.style.color = "var(--danger)"; status.textContent = e.message || "Couldn't delete. Try again."; }
+      btn.disabled = false;
+    }
   }
 
   /* ---------- saving ---------- */
