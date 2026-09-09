@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organize — WhenFree</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<div id="page">
+
+  <div class="topbar">
+    <div class="brand"><div class="mark"></div><h1>When<span>Free</span></h1></div>
+    <a class="back-link" href="/" style="margin:0;">&larr; New meeting</a>
+  </div>
+
+  <div class="meeting-header">
+    <div class="meeting-title"><h2 id="meeting-title-text">Loading…</h2></div>
+  </div>
+
+  <div class="links-section">
+    <div class="link-block">
+      <label for="participant-link">Participant link — share this with everyone</label>
+      <div class="share-link-row">
+        <input type="text" id="participant-link" class="mono" readonly value="">
+        <button class="btn-primary" id="copy-participant-link" type="button">Copy link</button>
+        <button class="btn-ghost" id="open-participant-link" type="button">Open</button>
+      </div>
+    </div>
+    <div class="link-block secondary">
+      <label for="organizer-link">Organizer link — keep this to yourself</label>
+      <div class="share-link-row">
+        <input type="text" id="organizer-link" class="mono" readonly value="">
+        <button class="btn-ghost" id="copy-organizer-link" type="button">Copy link</button>
+        <button class="btn-ghost" id="rotate-token" type="button">Regenerate</button>
+      </div>
+      <div class="link-warning">Anyone with this link can edit this meeting and delete it, even after you leave the page.</div>
+    </div>
+  </div>
+
+  <div class="panels">
+    <section class="panel panel-own">
+      <h3>Participants</h3>
+      <div id="participants-body"><div class="loading">Loading…</div></div>
+    </section>
+    <section class="panel panel-group">
+      <h3>Group availability</h3>
+      <div id="group-panel-body"></div>
+      <div class="decision-actions">
+        <button class="btn-primary" id="save-decision" type="button">Save decision</button>
+        <button class="btn-ghost" id="clear-decision" type="button">Clear decision</button>
+        <span class="hint" id="decision-status"></span>
+      </div>
+    </section>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="manage-section">
+    <h3>Manage meeting</h3>
+    <div class="settings">
+      <div class="setting-row">
+        <label for="rename-input">Meeting name</label>
+        <div class="setting-fields">
+          <input type="text" id="rename-input" placeholder="Meeting name" maxlength="200">
+          <button class="btn-ghost" id="rename-save" type="button">Rename</button>
+        </div>
+      </div>
+    </div>
+    <hr class="danger-divider">
+    <div class="danger-zone">
+      <div class="danger-title">Delete this meeting</div>
+      <div class="danger-hint">Removes the meeting and every participant's marks. Type <b class="mono" id="delete-code-label"></b> to confirm.</div>
+      <div class="setting-row">
+        <label for="delete-confirm-input">Meeting code</label>
+        <div class="setting-fields">
+          <input type="text" id="delete-confirm-input" class="mono" placeholder="Meeting code" maxlength="200" autocomplete="off">
+          <button class="btn-danger" id="delete-meeting" type="button">Delete meeting</button>
+        </div>
+      </div>
+      <div class="err" id="manage-err"></div>
+    </div>
+  </div>
+
+  <div class="deleted-banner" id="deleted-banner" hidden>
+    This meeting was deleted. <a href="/">Create a new one</a>.
+  </div>
+
+  <footer>Organizer panel — only the meeting organizer should have this link.</footer>
+</div>
+<div class="tip" id="tip"></div>
+
+<script src="/js/common.js"></script>
+<script src="/js/organize.js"></script>
+</body>
+</html>

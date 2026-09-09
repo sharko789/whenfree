@@ -194,9 +194,12 @@
     if (ownRubberBandController) ownRubberBandController.abort();
     ownRubberBandController = new AbortController();
 
-    buildGrid(gridWrap, {
+    WF.renderHeatmap(gridWrap, {
+      meeting,
+      heat: false,
+      selection: selectedCells,
       editable: true,
-      rubberBandSignal: ownRubberBandController.signal,
+      signal: ownRubberBandController.signal,
       onCommit: saveAvailability,
     });
   }
@@ -206,162 +209,20 @@
     const gridWrap = document.createElement("div");
     gridWrap.className = "grid-wrap";
     groupPanelBody.appendChild(gridWrap);
-    buildGrid(gridWrap, { editable: false });
+    WF.renderHeatmap(gridWrap, {
+      meeting,
+      decision: new Set(meeting.decision_cells || []),
+      tooltips: true,
+    });
+    renderDecisionNotice();
   }
 
-  /* ---------- shared grid builder ---------- */
-  // Renders the when2meet-style grid: 15-minute rows grouped visually into
-  // hour boxes (solid border at :00/top-of-next-hour, dotted at :30, no
-  // border at :15/:45), date columns grouped into blocks with a gap between
-  // non-consecutive date ranges, and hour labels centered on the solid
-  // hour-boundary lines (including one extra label for the closing edge).
-  function buildGrid(container, opts) {
-    const { GRID } = WF;
-    const slots = [];
-    for (let m = meeting.start_min; m < meeting.end_min; m += GRID.SLOT_MIN) slots.push(m);
-    const nSlots = slots.length;
-    const nHours = (meeting.end_min - meeting.start_min) / 60;
-
-    let counts = {}, participantCount = meeting.participants.length;
-    if (!opts.editable) {
-      meeting.participants.forEach((n) => {
-        (meeting.availability[n] || []).forEach((key) => {
-          counts[key] = (counts[key] || 0) + 1;
-        });
-      });
-    }
-    const highestCount = Math.max(0, ...Object.values(counts));
-
-    const outer = document.createElement("div");
-    outer.className = "tf-grid-outer" + (opts.editable ? "" : " heatmode");
-
-    // time label column
-    const labelsCol = document.createElement("div");
-    labelsCol.className = "tf-time-labels";
-    const spacer = document.createElement("div");
-    spacer.className = "tf-time-labels-spacer";
-    const labelsBody = document.createElement("div");
-    labelsBody.className = "tf-time-labels-body";
-    labelsBody.style.height = (nSlots * GRID.CELL_H) + "px";
-    for (let h = 0; h <= nHours; h++) {
-      const lbl = document.createElement("div");
-      lbl.className = "tf-hour-label";
-      lbl.style.top = (h * 4 * GRID.CELL_H) + "px";
-      lbl.textContent = WF.fmtHourLabel(meeting.start_min + h * 60);
-      labelsBody.appendChild(lbl);
-    }
-    labelsCol.append(spacer, labelsBody);
-
-    // date blocks, grouped so discontinuous ranges get a visual gap
-    const blocksWrap = document.createElement("div");
-    blocksWrap.className = "tf-blocks";
-    const groups = WF.groupConsecutiveDates(meeting.dates);
-
-    groups.forEach((group) => {
-      const block = document.createElement("div");
-      block.className = "tf-block";
-
-      const headerRow = document.createElement("div");
-      headerRow.className = "tf-block-header";
-      group.forEach(({ iso }) => {
-        const f = WF.fmtDateLabel(iso);
-        const h = document.createElement("div");
-        h.className = "tf-date-header";
-        h.innerHTML = `<span class="dow">${f.label}</span>${f.dow}`;
-        headerRow.appendChild(h);
-      });
-
-      const gridEl = document.createElement("div");
-      gridEl.className = "tf-block-grid";
-      gridEl.style.gridTemplateColumns = `repeat(${group.length}, ${GRID.CELL_W}px)`;
-      gridEl.style.gridTemplateRows = `repeat(${nSlots}, ${GRID.CELL_H}px)`;
-
-      slots.forEach((m, row) => {
-        const minuteInHour = m % 60;
-        const borderClass = minuteInHour === 0 ? "b-hour" : minuteInHour === 30 ? "b-half" : "b-quarter";
-        const isLastRow = row === nSlots - 1;
-        group.forEach(({ iso, idx }, col) => {
-          const key = iso + "_" + m;
-          const isLastCol = col === group.length - 1;
-          const cell = document.createElement("div");
-          cell.className = "tf-cell " + borderClass + (isLastRow ? " b-last-row" : "") + (isLastCol ? " b-last-col" : "");
-          cell.dataset.row = row;
-          cell.dataset.col = idx;
-          cell.dataset.key = key;
-          if (opts.editable) {
-            if (selectedCells.has(key)) cell.classList.add("on");
-          } else {
-            const c = counts[key] || 0;
-            if (c > 0) {
-              let intensity = highestCount ? Math.pow(c / highestCount, 1.5) : 0;
-              cell.style.background = `color-mix(in srgb, var(--hot) ${intensity * 100}%, transparent)`;
-            }
-          }
-          gridEl.appendChild(cell);
-        });
-      });
-
-      block.append(headerRow, gridEl);
-      blocksWrap.appendChild(block);
-    });
-
-    outer.append(labelsCol, blocksWrap);
-    container.appendChild(outer);
-
-    if (opts.editable) {
-      WF.enableRubberBand(blocksWrap, ".tf-cell", {
-        signal: opts.rubberBandSignal,
-        getKey: (cell) => cell.dataset.key,
-        isSelected: (key) => selectedCells.has(key),
-        snapshot: () => new Set(selectedCells),
-        onChange: (key, sel, cell, preview, edges, displaySel) => {
-          if (sel) selectedCells.add(key); else selectedCells.delete(key);
-          cell.classList.toggle("on", displaySel);
-          cell.classList.toggle("pv-top", preview && edges.top);
-          cell.classList.toggle("pv-right", preview && edges.right);
-          cell.classList.toggle("pv-bottom", preview && edges.bottom);
-          cell.classList.toggle("pv-left", preview && edges.left);
-        },
-        onCommit: opts.onCommit,
-      });
-
-      const legend = document.createElement("div");
-      legend.className = "legend";
-      legend.innerHTML = `<span class="swatch" style="background:var(--cold)"></span>free time to mark<span class="swatch" style="background:var(--amber);margin-left:12px;"></span>you're marked free`;
-      container.appendChild(legend);
-    } else {
-      attachHeatHandlers(blocksWrap, counts);
-
-      const legendOpacities = Array.from(
-        { length: highestCount + 1 },
-        (_, i) => (highestCount ? i / highestCount : 0)
-      );
-      const legend = document.createElement("div");
-      legend.className = "legend"; legend.innerHTML = `0/${participantCount} free<span class="legend-scale" style="width:${legendOpacities.length * 25 + "px"};">${legendOpacities.map(t => `<div style="background:var(--hot);opacity:${Math.pow(t, 1.5)}"></div>`).join("")}</span>${highestCount}/${participantCount} free`;
-      container.appendChild(legend);
-    }
-  }
-
-  function attachHeatHandlers(container, counts) {
-    function show(cell, x, y) {
-      const key = cell.dataset.key;
-      const c = counts[key] || 0;
-      if (c === 0) { tipEl.style.display = "none"; return; }
-      const names = meeting.participants.filter((n) => (meeting.availability[n] || []).includes(key));
-      tipEl.innerHTML = `<b>${c} ${c === 1 ? "person" : "people"}</b><br>${meeting.participants
-        .map(name => `<div class="${names.includes(name) ? "" : "unavailable"}">${WF.escapeHtml(name)}</div>`)
-        .join("")}`;
-      tipEl.style.left = Math.min(x + 12, window.innerWidth - 240) + "px";
-      tipEl.style.top = (y + 14) + "px";
-      tipEl.style.display = "block";
-    }
-    function hide() { tipEl.style.display = "none"; }
-    container.querySelectorAll(".tf-cell").forEach((cell) => {
-      cell.addEventListener("mousemove", (e) => show(cell, e.clientX, e.clientY));
-      cell.addEventListener("mouseleave", hide);
-      cell.addEventListener("click", (e) => show(cell, e.clientX, e.clientY));
-    });
-    container.addEventListener("mouseleave", hide);
+  function renderDecisionNotice() {
+    const notice = document.getElementById("decision-notice");
+    const set = new Set(meeting.decision_cells || []);
+    if (!set.size) { notice.hidden = true; return; }
+    notice.innerHTML = `<b>Meeting is set for</b> ${WF.escapeHtml(WF.formatDecision(meeting, set))}`;
+    notice.hidden = false;
   }
 
   /* ---------- self-service deletion ---------- */

@@ -133,7 +133,7 @@
           dates: [...state.createDates],
         }),
       });
-      window.location.href = "/meeting/" + res.id;
+      window.location.href = "/organize/" + res.organize_token;
     } catch (e) {
       errEl.textContent = e.message || "Something went wrong saving the meeting. Try again.";
     }

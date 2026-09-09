@@ -167,4 +167,78 @@ td.cal-day.selected-preview{box-shadow: inset 0 0 0 2px var(--danger);}
 .loading{color:var(--ink-faint);font-size:14px;padding:40px 0;text-align:center;}
 footer{color:var(--ink-faint);font-size:12px;text-align:center;margin-top:30px;}
 
+/* decided-slot outline: per-edge inset shadows stacked via custom props
+   (a multi-selector rule keeps only the last); idle = transparent, not `none`
+   (Chrome drops the whole shadow list if any entry is `none`). */
+.tf-cell{--d-t:0 0 0 0 transparent;--d-b:0 0 0 0 transparent;--d-l:0 0 0 0 transparent;--d-r:0 0 0 0 transparent;box-shadow:var(--d-t),var(--d-b),var(--d-l),var(--d-r);}
+.tf-cell.d-top{--d-t:inset 0 2px 0 0 var(--ink-dim);}
+.tf-cell.d-bottom{--d-b:inset 0 -2px 0 0 var(--ink-dim);}
+.tf-cell.d-left{--d-l:inset 2px 0 0 0 var(--ink-dim);}
+.tf-cell.d-right{--d-r:inset -2px 0 0 0 var(--ink-dim);}
+.legend .swatch-decided{background:transparent;border:2px solid var(--ink-dim);}
+
+/* public meeting page: announced decision */
+.decision-notice{
+  margin-top:12px;padding:10px 14px;border-radius:8px;
+  background:color-mix(in srgb, var(--amber) 9%, var(--bg-card));
+  border:1px solid var(--amber-soft);
+  font-size:13.5px;color:var(--ink-dim);
+}
+.decision-notice b{color:var(--amber);font-weight:600;}
+
+/* organizer panel */
+.dead-card{max-width:520px;margin:40px auto;}
+
+.links-section{margin-bottom:24px;}
+.link-block + .link-block{margin-top:18px;}
+.link-block label{margin-top:0;}
+.link-block.secondary .share-link-row input{color:var(--ink-dim);}
+.link-warning{color:var(--ink-faint);font-size:12px;margin-top:8px;line-height:1.5;}
+
+/* the list scrolls inside the panel; its max-height is set to the heatmap
+   grid's height in organize.js so a long list never stretches the page */
+#participants-body{overflow-y:auto;min-height:0;padding-right:4px;}
+
+.p-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+.participant-row td{padding:6px 8px 6px 0;}
+.participant-row + .participant-row td{border-top:1px solid var(--line);}
+.p-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.p-actions{white-space:nowrap;text-align:right;}
+.participant-row[data-hidden="1"]{opacity:.5;}
+.participant-row[data-hidden="1"] .p-name{text-decoration:line-through;}
+.participant-row.p-deleting{opacity:.4;pointer-events:none;}
+.p-toggle,.p-delete{
+  width:64px;padding:5px 8px;font-size:12px;border-radius:6px;text-align:center;white-space:nowrap;
+  background:transparent;border:1px solid var(--line);color:var(--ink-dim);
+}
+.p-toggle{margin-right:8px;}
+.p-toggle:active,.p-delete:active{transform:none;}
+.p-toggle:hover{border-color:var(--amber-soft);color:var(--amber);}
+.p-delete{color:var(--danger);}
+.p-delete:hover{border-color:var(--danger);}
+
+.decision-actions{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.decision-actions .hint{margin-top:0;}
+
+.section-divider{border:0;height:1px;background:var(--line);margin:32px 0 26px;}
+.manage-section{max-width:560px;}
+.manage-section h3{font-size:14px;color:var(--ink-dim);font-weight:500;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;}
+.setting-row{display:grid;grid-template-columns:140px 1fr;gap:14px;align-items:center;}
+.setting-row label{margin:0;font-size:13.5px;}
+.setting-fields{display:flex;gap:10px;}
+.setting-fields input{flex:1;}
+.danger-divider{border:0;height:1px;background:var(--line);margin:22px 0 18px;}
+.danger-zone .setting-row{margin-top:14px;}
+@media(max-width:520px){.setting-row{grid-template-columns:1fr;gap:6px;align-items:start;}}
+.danger-title{color:var(--danger);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.danger-hint{color:var(--ink-faint);font-size:12.5px;margin-bottom:10px;}
+.danger-hint b{color:var(--ink-dim);}
+.btn-danger{background:var(--danger);color:#1A0C07;}
+.btn-danger:hover{background:#eb8b75;}
+
+.deleted-banner{
+  background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px 20px;margin-top:20px;text-align:center;color:var(--ink-dim);font-size:14px;
+}
+
 @media (prefers-reduced-motion: reduce){*{transition:none !important;}}
