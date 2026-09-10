@@ -428,7 +428,7 @@ window.WF = (function () {
         legend.innerHTML += `<span class="swatch swatch-decided" style="margin-left:12px;"></span>decided`;
       }
     } else {
-      legend.innerHTML = `<span class="swatch" style="background:var(--cold)"></span>free time to mark<span class="swatch" style="background:var(--amber);margin-left:12px;"></span>you're marked free`;
+      legend.innerHTML = `<span class="swatch" style="background:var(--cold)"></span>occupied<span class="swatch" style="background:var(--amber);margin-left:12px;"></span>free`;
     }
     container.appendChild(legend);
 
