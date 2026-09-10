@@ -28,6 +28,7 @@
       return;
     }
     titleText.textContent = meeting.title;
+    document.title = meeting.title + " - WhenFree";
     const link = WF.meetingUrl(meeting.id);
     shareLinkInput.value = link;
     document.getElementById("copy-link").addEventListener("click", (e) => {

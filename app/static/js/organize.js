@@ -90,6 +90,7 @@
   /* ---------- rendering ---------- */
   function renderAll() {
     titleText.textContent = meeting.title;
+    setDocumentTitle();
     participantLinkInput.value = WF.meetingUrl(meeting.id);
     organizerLinkInput.value = window.location.origin + "/organize/" + organizerToken;
     renameInput.value = meeting.title;
@@ -169,6 +170,10 @@
     }
   }
 
+  function setDocumentTitle() {
+    document.title = meeting.title + " - Organize - WhenFree";
+  }
+
   function hiddenParticipantNames() {
     const out = [];
     participantsBody.querySelectorAll('.participant-row[data-hidden="1"] .p-name').forEach((el) => out.push(el.textContent));
@@ -239,6 +244,7 @@
         body: JSON.stringify({ title }),
       });
       titleText.textContent = meeting.title;
+      setDocumentTitle();
       renameInput.value = meeting.title;
     } catch (e) {
       manageErr.textContent = e.message || "Couldn't rename the meeting.";
