@@ -49,8 +49,8 @@
   // Unknown/rotated/deleted token: the panel can't do anything useful.
   function showDeadPanel(msg) {
     document.getElementById("page").innerHTML =
-      `<div class="topbar"><div class="brand"><div class="mark"></div><h1>When<span>Free</span></h1></div>` +
-      `<a class="back-link" href="/" style="margin:0;">&larr; New meeting</a></div>` +
+      `<div class="topbar"><a class="brand" href="/"><div class="mark"></div><h1>When<span>Free</span></h1></a>` +
+      `<a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a></div>` +
       `<div class="card dead-card"><h3>This organizer link doesn't work</h3>` +
       `<p class="hint">${WF.escapeHtml(msg)}</p>` +
       `<p class="hint">The link may have been regenerated, or the meeting deleted.</p></div>`;
