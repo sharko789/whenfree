@@ -2,6 +2,7 @@ services:
   whenfree:
     build: .
     container_name: whenfree
+    user: "1000:1000"
     ports:
       - "8000:8000"
     volumes:
