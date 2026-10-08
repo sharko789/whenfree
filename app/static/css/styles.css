@@ -116,8 +116,23 @@ td.cal-day.selected-preview{box-shadow: inset 0 0 0 2px var(--danger);}
 .participant-list b{color:var(--ink-dim);font-weight:500;}
 
 /* the availability grid itself (shared by "your availability" & "group availability") */
-.grid-wrap{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;overflow-x:auto;}
-.tf-grid-outer{display:flex;align-items:flex-start;}
+.grid-wrap{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;overflow-x:auto;
+  scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;}
+.tf-grid-outer{display:flex;align-items:flex-start;position:relative;}
+/* edge fade while dates are still off-screen. Lives on the non-scrolling
+   wrapper (an absolute child of the scroller would scroll with the
+   content); left edge is offset by the fixed time-label column. Height is
+   restricted to the cell area: below the date header, above the scrollbar
+   padding. Fades from the card background at the outer edge to transparent */
+.tf-grid-outer::before,.tf-grid-outer::after{
+  content:"";position:absolute;top:var(--header-h);bottom:10px;width:16px;pointer-events:none;
+  opacity:0;transition:opacity .15s ease;
+}
+.tf-grid-outer::before{left:50px;background:linear-gradient(to right,var(--bg-card),transparent);}
+.tf-grid-outer::after{right:0;background:linear-gradient(to left,var(--bg-card),transparent);}
+.tf-grid-outer.can-scroll-left::before,.tf-grid-outer.can-scroll-right::after{opacity:1;}
+/* set briefly on render so the initial shadow state doesn't animate in */
+.tf-grid-outer.no-fade::before,.tf-grid-outer.no-fade::after{transition:none;}
 .tf-time-labels{flex-shrink:0;width:50px;}
 .tf-time-labels-spacer{height:var(--header-h);}
 .tf-time-labels-body{position:relative;}
@@ -126,7 +141,16 @@ td.cal-day.selected-preview{box-shadow: inset 0 0 0 2px var(--danger);}
   font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-faint);
   transform:translateY(-50%);white-space:nowrap;
 }
-.tf-blocks{display:flex;overflow-x:auto;}
+/* padding-bottom equals the custom scrollbar height so the last row sits
+   clear of the in-flow horizontal scrollbar with no extra gap */
+.tf-blocks{display:flex;overflow-x:auto;padding-bottom:10px;
+  scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;}
+/* custom dark scrollbar so it matches the theme in Chromium/Safari and
+   Firefox (which reads scrollbar-color instead) */
+.grid-wrap::-webkit-scrollbar,.tf-blocks::-webkit-scrollbar{height:10px;}
+.grid-wrap::-webkit-scrollbar-track,.tf-blocks::-webkit-scrollbar-track{background:transparent;}
+.grid-wrap::-webkit-scrollbar-thumb,.tf-blocks::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:5px;}
+.grid-wrap::-webkit-scrollbar-thumb:hover,.tf-blocks::-webkit-scrollbar-thumb:hover{background:var(--ink-faint);}
 .tf-block{margin-right:var(--group-gap);}
 .tf-block:last-child{margin-right:0;}
 .tf-block-header{display:flex;height:var(--header-h);align-items:flex-end;padding-bottom:4px;}
@@ -149,7 +173,7 @@ td.cal-day.selected-preview{box-shadow: inset 0 0 0 2px var(--danger);}
 .tf-cell.pv-right{border-right:2px solid var(--danger);}
 .tf-grid-outer.heatmode .tf-cell{cursor:default;}
 
-.legend{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:11.5px;color:var(--ink-faint);}
+.legend{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11.5px;color:var(--ink-faint);}
 .legend .swatch{width:14px;height:14px;border-radius:3px;display:inline-block;}
 .legend-scale{display:flex;height:14px;border-radius:3px;overflow:hidden;max-width:min(70%,200px);background:var(--cold);}
 .legend-scale div{flex:1;}

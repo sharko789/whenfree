@@ -181,6 +181,7 @@
   }
 
   function renderDecisionGrid() {
+    const prevScroll = groupPanelBody.querySelector(".tf-blocks")?.scrollLeft || 0;
     groupPanelBody.innerHTML = "";
     const gridWrap = document.createElement("div");
     gridWrap.className = "grid-wrap";
@@ -199,6 +200,7 @@
       tooltips: true,
       signal: gridRubberBandController.signal,
       onCommit: renderDecisionGrid,
+      scrollLeft: prevScroll,
     });
     syncParticipantsHeight();
   }

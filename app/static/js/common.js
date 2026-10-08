@@ -60,11 +60,15 @@ window.WF = (function () {
   // its original (global) index into the full array, since that index is
   // what the availability grid uses as a stable column number.
   function groupConsecutiveDates(sortedDates) {
+    // Compare calendar days in UTC: a local-timezone diff of exactly 24h
+    // fails on DST transition days (25h/23h days) and would split a
+    // continuous date range. In UTC consecutive days are always 86400000ms
+    // apart.
     const groups = [];
     let current = [];
     let prevTime = null;
     sortedDates.forEach((iso, idx) => {
-      const t = new Date(iso + "T00:00:00").getTime();
+      const t = new Date(iso + "T00:00:00Z").getTime();
       if (prevTime !== null && t - prevTime === 86400000) {
         current.push({ iso, idx });
       } else {
@@ -382,7 +386,34 @@ window.WF = (function () {
     });
 
     outer.append(labelsCol, blocksWrap);
+    // no-fade suppresses the shadow opacity transition for the first paint
+    // so a data re-render doesn't replay the fade-in.
+    outer.classList.add("no-fade");
     container.appendChild(outer);
+    // Re-renders rebuild the scroller from scratch; restore the caller's
+    // horizontal position before the shadow classes are computed.
+    blocksWrap.scrollLeft = opts.scrollLeft || 0;
+
+    // Edge shadows hint at off-screen dates while the block row overflows.
+    // The classes go on the non-scrolling wrapper (outer), since an absolute
+    // child of the scroller would scroll along with the content. The
+    // ResizeObserver needs no explicit disconnect: it only observes the
+    // (soon-detached) scroll container, so the whole listener graph is
+    // garbage-collected when the grid is re-rendered.
+    function updateScrollShadows() {
+      outer.classList.toggle("can-scroll-left", blocksWrap.scrollLeft > 1);
+      outer.classList.toggle(
+        "can-scroll-right",
+        blocksWrap.scrollLeft + blocksWrap.clientWidth < blocksWrap.scrollWidth - 1
+      );
+    }
+    blocksWrap.addEventListener("scroll", updateScrollShadows, { passive: true });
+    new ResizeObserver(updateScrollShadows).observe(blocksWrap);
+    updateScrollShadows();
+    // Commit the initial shadow state with transitions off, then re-enable
+    // them for scroll/resize changes.
+    void outer.offsetWidth;
+    outer.classList.remove("no-fade");
 
     // A grid can be both editable (decision drag-select) and show the
     // per-cell "who's free" hover tip; the tip is suppressed while a drag is
