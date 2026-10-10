@@ -2,15 +2,18 @@
   "use strict";
   const WF = window.WF;
   const WEEK_COUNT = 6;
-  const DAY_MS = 86400000;
 
   function startOfWeek(d) {
     const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     copy.setDate(copy.getDate() - copy.getDay());
     return copy;
   }
+  // Calendar-day step: fixed 24h ms math drifts across DST transition days
+  // (a 25h fall-back day pushes every later cell back by an hour, onto the
+  // previous day at 23:00). The Date constructor normalizes day overflow in
+  // local calendar days; local midnight always exists.
   function addDays(d, n) {
-    return new Date(d.getTime() + n * DAY_MS);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
   }
   function isoOf(d) {
     return WF.isoDate(d.getFullYear(), d.getMonth(), d.getDate());
