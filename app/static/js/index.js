@@ -73,12 +73,11 @@
       for (let col = 0; col < 7; col++) {
         const d = days[row * 7 + col];
         const iso = isoOf(d);
-        const disabled = iso < today;
         const td = document.createElement("td");
         td.dataset.row = row;
         td.dataset.col = col;
         td.dataset.date = iso;
-        td.className = "cal-day" + (disabled ? " disabled" : "") + (iso === today ? " today" : "") + (state.createDates.has(iso) ? " selected" : "");
+        td.className = "cal-day" + (iso === today ? " today" : "") + (state.createDates.has(iso) ? " selected" : "");
         td.textContent = String(d.getDate());
         tr.appendChild(td);
       }
@@ -99,7 +98,6 @@
 
     WF.enableRubberBand(calSlot, "td.cal-day", {
       signal: calRubberBandController.signal,
-      isDisabled: (cell) => cell.classList.contains("disabled"),
       getKey: (cell) => cell.dataset.date,
       isSelected: (key) => state.createDates.has(key),
       snapshot: () => new Set(state.createDates),
