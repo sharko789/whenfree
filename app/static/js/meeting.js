@@ -160,6 +160,7 @@
   }
 
   function renderOwnPanelGrid() {
+    const prevScroll = ownPanelBody.querySelector(".tf-blocks")?.scrollLeft || 0;
     ownPanelBody.innerHTML = "";
     ownPanelBody.classList.remove("own-panel-body-login");
 
@@ -202,10 +203,12 @@
       editable: true,
       signal: ownRubberBandController.signal,
       onCommit: saveAvailability,
+      scrollLeft: prevScroll,
     });
   }
 
   function renderGroupPanel() {
+    const prevScroll = groupPanelBody.querySelector(".tf-blocks")?.scrollLeft || 0;
     groupPanelBody.innerHTML = "";
     const gridWrap = document.createElement("div");
     gridWrap.className = "grid-wrap";
@@ -214,6 +217,7 @@
       meeting,
       decision: new Set(meeting.decision_cells || []),
       tooltips: true,
+      scrollLeft: prevScroll,
     });
     renderDecisionNotice();
   }
