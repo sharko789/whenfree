@@ -224,8 +224,8 @@ def create_meeting(payload: MeetingCreate):
         raise HTTPException(400, "Meeting name is required.")
     if payload.end_min <= payload.start_min:
         raise HTTPException(400, "End time must be after start time.")
-    if payload.start_min % 60 or payload.end_min % 60:
-        raise HTTPException(400, "Start and end times must be whole hours.")
+    if payload.start_min % 15 or payload.end_min % 15:
+        raise HTTPException(400, "Start and end times must fall on a quarter hour.")
 
     # Raw identifiers, not route paths: the client composes both URLs from
     # location.origin, so a future panel-route move is a client-side change

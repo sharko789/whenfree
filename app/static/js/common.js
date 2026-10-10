@@ -284,7 +284,6 @@ window.WF = (function () {
     const slots = [];
     for (let m = meeting.start_min; m < meeting.end_min; m += GRID.SLOT_MIN) slots.push(m);
     const nSlots = slots.length;
-    const nHours = (meeting.end_min - meeting.start_min) / 60;
 
     const hiddenNames = new Set(opts.hiddenNames || []);
     const counts = {};
@@ -325,11 +324,12 @@ window.WF = (function () {
     const labelsBody = document.createElement("div");
     labelsBody.className = "tf-time-labels-body";
     labelsBody.style.height = (nSlots * GRID.CELL_H) + "px";
-    for (let h = 0; h <= nHours; h++) {
+    const firstHour = Math.ceil(meeting.start_min / 60) * 60;
+    for (let H = firstHour; H <= meeting.end_min; H += 60) {
       const lbl = document.createElement("div");
       lbl.className = "tf-hour-label";
-      lbl.style.top = (h * 4 * GRID.CELL_H) + "px";
-      lbl.textContent = fmtHourLabel(meeting.start_min + h * 60);
+      lbl.style.top = ((H - meeting.start_min) / GRID.SLOT_MIN * GRID.CELL_H) + "px";
+      lbl.textContent = fmtHourLabel(H);
       labelsBody.appendChild(lbl);
     }
     labelsCol.append(spacer, labelsBody);

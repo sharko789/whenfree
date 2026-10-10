@@ -18,6 +18,12 @@
   function isoOf(d) {
     return WF.isoDate(d.getFullYear(), d.getMonth(), d.getDate());
   }
+  function timeToMin(v) {
+    if (!v) return null;
+    const [h, m] = v.split(":").map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    return h * 60 + m;
+  }
   function fmtRangeLabel(first, last) {
     const m1 = WF.MONTH[first.getMonth()].slice(0, 3), m2 = WF.MONTH[last.getMonth()].slice(0, 3);
     const y1 = first.getFullYear(), y2 = last.getFullYear();
@@ -118,19 +124,17 @@
     if (!title) { errEl.textContent = "Give the meeting a name."; titleInput.focus(); return; }
     if (state.createDates.size === 0) { errEl.textContent = "Add at least one date."; return; }
 
-    const startHour = parseInt(startInput.value, 10);
-    const endHour = parseInt(endInput.value, 10);
-    if (Number.isNaN(startHour) || Number.isNaN(endHour)) { errEl.textContent = "Set both hours."; return; }
-    if (startHour < 0 || startHour > 23) { errEl.textContent = "Earliest hour must be between 0 and 23."; return; }
-    if (endHour < 1 || endHour > 24) { errEl.textContent = "Latest hour must be between 1 and 24."; return; }
-    if (endHour <= startHour) { errEl.textContent = "Latest hour has to be after earliest hour."; return; }
+    const startMin = timeToMin(startInput.value);
+    const endMin = timeToMin(endInput.value);
+    if (startMin == null || endMin == null) { errEl.textContent = "Set both times."; return; }
+    if (endMin <= startMin) { errEl.textContent = "Latest time has to be after earliest time."; return; }
 
     errEl.textContent = "Creating…";
     try {
       const res = await WF.api("/meetings", {
         method: "POST",
         body: JSON.stringify({
-          title, start_min: startHour * 60, end_min: endHour * 60,
+          title, start_min: startMin, end_min: endMin,
           dates: [...state.createDates],
         }),
       });

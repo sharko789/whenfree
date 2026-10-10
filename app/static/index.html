@@ -33,14 +33,12 @@
 
     <div class="row2">
       <div>
-        <label for="c-start">Earliest hour</label>
-        <input type="number" id="c-start" min="0" max="23" value="9" inputmode="numeric">
-        <div class="field-hint">0&ndash;23, 24h clock</div>
+        <label for="c-start">Earliest time</label>
+        <input type="time" id="c-start" step="900" value="09:00">
       </div>
       <div>
-        <label for="c-end">Latest hour</label>
-        <input type="number" id="c-end" min="1" max="24" value="18" inputmode="numeric">
-        <div class="field-hint">1&ndash;24, 24h clock</div>
+        <label for="c-end">Latest time</label>
+        <input type="time" id="c-end" step="900" value="18:00">
       </div>
     </div>
 
