@@ -29,15 +29,27 @@ body{
   min-height:100vh;
   -webkit-font-smoothing:antialiased;
 }
-#page{max-width:85%;margin:0 auto;padding:32px 20px;}
+#page{max-width:85%;margin:0 auto;padding:32px 20px;transition:opacity .15s ease;}
 #page.page-narrow{max-width:620px;}
+/* hidden until i18n.js applies the saved/browser locale, so the
+   English fallback text never flashes on load */
+html[data-i18n-loading] #page{opacity:0;}
+@media (prefers-reduced-motion:reduce){#page{transition:none;}}
 h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;}
 .mono{font-family:'JetBrains Mono',monospace;}
 a{color:var(--amber);}
 
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;gap:8px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
 .topbar-link{color:var(--ink-faint);font-size:13px;text-decoration:none;}
 .topbar-link:hover{color:var(--amber);}
+.lang-switch{display:flex;border:1px solid var(--line);border-radius:6px;}
+.lang-btn{background:transparent;border:0;color:var(--ink-faint);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;padding:3px 8px;cursor:pointer;letter-spacing:.04em;}
+.lang-btn:first-child{border-radius:5px 0 0 5px;}
+.lang-btn:last-child{border-radius:0 5px 5px 0;}
+.lang-btn + .lang-btn{border-left:1px solid var(--line);}
+.lang-btn:not(.active):hover{color:var(--ink);}
+.lang-btn.active{background:var(--amber);color:#14182E;}
 .brand{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none;}
 .brand:hover h1{color:var(--amber);}
 .brand .mark{
@@ -81,17 +93,33 @@ button:disabled{opacity:.4;cursor:not-allowed;}
 .cal-header .cal-month{font-family:'Space Grotesk',sans-serif;font-size:15px;color:var(--ink);}
 .cal-nav{background:var(--bg-elev);border:1px solid var(--line);color:var(--ink-dim);width:30px;height:30px;border-radius:7px;padding:0;font-size:15px;display:flex;align-items:center;justify-content:center;}
 .cal-nav:hover{color:var(--amber);border-color:var(--amber-soft);}
-table.cal{border-collapse:collapse;width:100%;margin-top:10px;user-select:none;table-layout:fixed;}
-table.cal th{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-faint);font-weight:500;padding-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+#cal-slot{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:10px;}
+table.cal{border-collapse:collapse;width:100%;user-select:none;table-layout:fixed;}
+table.cal th{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-faint);font-weight:500;padding:8px 0 6px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line);}
 td.cal-day{
   height:42px;text-align:center;vertical-align:middle;
   font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-dim);
-  border:1px solid var(--bg);background:var(--bg-elev);cursor:pointer;border-radius:6px;
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  background:var(--bg-elev);cursor:pointer;
   transition:background .08s ease,color .08s ease;
+  /* per-edge outline, same scheme as the availability grid: one 2px
+     --danger rectangle around the whole drag selection (not per cell).
+     box-shadow (not borders) so the collapsed table never reflows mid-drag. */
+  --p-t:inset 0 0 0 0 transparent;--p-b:inset 0 0 0 0 transparent;
+  --p-l:inset 0 0 0 0 transparent;--p-r:inset 0 0 0 0 transparent;
+  box-shadow:var(--p-t),var(--p-b),var(--p-l),var(--p-r);
 }
-td.cal-day.today:not(.selected){box-shadow:inset 0 0 0 1px var(--amber-soft);}
+td.cal-day:last-child{border-right:0;}
+tr:last-child td.cal-day{border-bottom:0;}
+td.cal-day.today:not(.selected):not(.selected-preview){
+  --p-t:inset 0 1px 0 0 var(--amber-soft);--p-b:inset 0 -1px 0 0 var(--amber-soft);
+  --p-l:inset 1px 0 0 0 var(--amber-soft);--p-r:inset -1px 0 0 0 var(--amber-soft);
+}
 td.cal-day.selected{background:var(--amber);color:#191300;font-weight:600;}
-td.cal-day.selected-preview{box-shadow: inset 0 0 0 2px var(--danger);}
+td.cal-day.pv-top{--p-t:inset 0 2px 0 0 var(--danger);}
+td.cal-day.pv-bottom{--p-b:inset 0 -2px 0 0 var(--danger);}
+td.cal-day.pv-left{--p-l:inset 2px 0 0 0 var(--danger);}
+td.cal-day.pv-right{--p-r:inset -2px 0 0 0 var(--danger);}
 .cal-hint{color:var(--ink-faint);font-size:12px;margin-top:10px;}
 
 /* meeting page */
@@ -227,9 +255,10 @@ td.cal-day.selected-preview{box-shadow: inset 0 0 0 2px var(--danger);}
 .participant-row[data-hidden="1"] .p-name{text-decoration:line-through;}
 .participant-row.p-deleting{opacity:.4;pointer-events:none;}
 .p-toggle,.p-delete{
-  width:64px;padding:5px 8px;font-size:12px;border-radius:6px;text-align:center;white-space:nowrap;
-  background:transparent;border:1px solid var(--line);color:var(--ink-dim);
+  width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:6px;background:transparent;border:1px solid var(--line);color:var(--ink-dim);
 }
+.p-toggle svg,.p-delete svg{width:15px;height:15px;display:block;}
 .p-toggle{margin-right:8px;}
 .p-toggle:active,.p-delete:active{transform:none;}
 .p-toggle:hover{border-color:var(--amber-soft);color:var(--amber);}

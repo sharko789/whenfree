@@ -1,6 +1,7 @@
 (function () {
   "use strict";
   const WF = window.WF;
+  const I18N = window.WF_I18N;
 
   const pathMatch = window.location.pathname.match(/^\/organize\/([A-Za-z0-9]+)\/?$/);
   if (!pathMatch) { window.location.href = "/"; return; }
@@ -10,6 +11,7 @@
   let workingDecision = new Set(); // decision cells being edited in the grid
   let gridRubberBandController = null;
   let deleted = false;
+  const hiddenParticipants = new Set(); // local view filter, survives re-renders
 
   const titleText = document.getElementById("meeting-title-text");
   const participantLinkInput = document.getElementById("participant-link");
@@ -21,11 +23,22 @@
   const manageErr = document.getElementById("manage-err");
   const deletedBanner = document.getElementById("deleted-banner");
 
+  // Thin-line icons (Feather, MIT) that inherit currentColor the same way the
+  // week-nav arrows do. Text labels move to aria-label + title, so the
+  // accessible name must be set explicitly on each button.
+  const ICON_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const ICON_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+
   async function init() {
+    await I18N.ready;
     if (!(await loadMeeting())) return;
     bindStaticControls();
     renderAll();
     new ResizeObserver(syncParticipantsHeight).observe(groupPanelBody);
+    document.addEventListener("wf:locale", () => {
+      if (meeting && !deleted) renderAll();
+    });
   }
 
   // Cap the participant list to the heatmap grid's height so a long list
@@ -39,7 +52,7 @@
     try {
       meeting = await WF.api("/organize/" + organizerToken);
     } catch (e) {
-      showDeadPanel(e.message || "No meeting found for that organizer link.");
+      showDeadPanel(I18N.t("no_meeting_found"));
       return false;
     }
     workingDecision = new Set(meeting.decision_cells || []);
@@ -50,16 +63,20 @@
   function showDeadPanel(msg) {
     document.getElementById("page").innerHTML =
       `<div class="topbar"><a class="brand" href="/"><div class="mark"></div><h1>When<span>Free</span></h1></a>` +
-      `<a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a></div>` +
-      `<div class="card dead-card"><h3>This organizer link doesn't work</h3>` +
+      `<div class="topbar-right"><div class="lang-switch" role="group">` +
+      `<button class="lang-btn" data-lang="en" type="button">EN</button>` +
+      `<button class="lang-btn" data-lang="de" type="button">DE</button></div>` +
+      `<a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a></div></div>` +
+      `<div class="card dead-card"><h3>${I18N.t("dead_panel_title")}</h3>` +
       `<p class="hint">${WF.escapeHtml(msg)}</p>` +
-      `<p class="hint">The link may have been regenerated, or the meeting deleted.</p></div>`;
+      `<p class="hint">${I18N.t("dead_panel_hint")}</p></div>`;
+    I18N.applyStatic(document.getElementById("page"));
   }
 
   function bindStaticControls() {
-    document.getElementById("copy-participant-link").addEventListener("click", (e) => copyField(participantLinkInput, e.target, "Copy link"));
+    document.getElementById("copy-participant-link").addEventListener("click", (e) => copyField(participantLinkInput, e.target));
     document.getElementById("open-participant-link").addEventListener("click", () => openField(participantLinkInput));
-    document.getElementById("copy-organizer-link").addEventListener("click", (e) => copyField(organizerLinkInput, e.target, "Copy link"));
+    document.getElementById("copy-organizer-link").addEventListener("click", (e) => copyField(organizerLinkInput, e.target));
     document.getElementById("rotate-token").addEventListener("click", rotateToken);
     document.getElementById("save-decision").addEventListener("click", saveDecision);
     document.getElementById("clear-decision").addEventListener("click", clearDecision);
@@ -68,12 +85,12 @@
     document.getElementById("delete-meeting").addEventListener("click", deleteMeeting);
   }
 
-  function copyField(input, btn, originalLabel) {
+  function copyField(input, btn) {
     input.select();
     input.setSelectionRange(0, input.value.length);
     navigator.clipboard && navigator.clipboard.writeText(input.value);
-    btn.textContent = "Copied";
-    setTimeout(() => { btn.textContent = originalLabel; }, 1200);
+    btn.textContent = I18N.t("copied");
+    setTimeout(() => { btn.textContent = I18N.t("copy_link"); }, 1200);
   }
 
   function openField(input) {
@@ -90,6 +107,11 @@
   /* ---------- rendering ---------- */
   function renderAll() {
     titleText.textContent = meeting.title;
+    // Detach from static i18n: applyStatic() would otherwise clobber the
+    // real title with the "loading" placeholder on every locale switch.
+    // (Currently masked because renderAll re-runs right after applyStatic
+    // in the wf:locale handler - don't rely on that ordering.)
+    titleText.removeAttribute("data-i18n");
     setDocumentTitle();
     participantLinkInput.value = WF.meetingUrl(meeting.id);
     organizerLinkInput.value = window.location.origin + "/organize/" + organizerToken;
@@ -102,7 +124,7 @@
   function renderParticipants() {
     participantsBody.innerHTML = "";
     if (meeting.participants.length === 0) {
-      participantsBody.innerHTML = '<div class="hint">No one has added their availability yet. Share the participant link to collect availability.</div>';
+      participantsBody.innerHTML = `<div class="hint">${I18N.t("no_participants_org")}</div>`;
       return;
     }
     const table = document.createElement("table");
@@ -122,17 +144,20 @@
       const actionsCell = document.createElement("td");
       actionsCell.className = "p-actions";
 
+      row.dataset.hidden = hiddenParticipants.has(name) ? "1" : "";
+
+      const isHidden = hiddenParticipants.has(name);
       const hideBtn = document.createElement("button");
       hideBtn.type = "button";
       hideBtn.className = "p-toggle";
-      hideBtn.textContent = "Hide";
-      hideBtn.title = "Only hides them in this panel's heatmap — participants are unaffected.";
+      hideBtn.innerHTML = isHidden ? ICON_EYE_OFF : ICON_EYE;
+      hideBtn.setAttribute("aria-label", I18N.t("hide_aria"));
 
       const delBtn = document.createElement("button");
       delBtn.type = "button";
       delBtn.className = "p-delete";
-      delBtn.textContent = "Delete";
-      delBtn.title = "Remove this participant and their marks for everyone.";
+      delBtn.innerHTML = ICON_TRASH;
+      delBtn.setAttribute("aria-label", I18N.t("delete_participant_aria"));
 
       actionsCell.append(hideBtn, delBtn);
       row.append(nameCell, actionsCell);
@@ -151,33 +176,36 @@
 
   function hideParticipant(row) {
     // Local view filter only: excluded from heat counts, never persisted.
-    const hidden = row.dataset.hidden === "1";
-    row.dataset.hidden = hidden ? "" : "1";
-    row.querySelector(".p-toggle").textContent = hidden ? "Hide" : "Show";
+    const name = row.querySelector(".p-name").textContent;
+    const hidden = !hiddenParticipants.has(name);
+    if (hidden) hiddenParticipants.add(name); else hiddenParticipants.delete(name);
+    row.dataset.hidden = hidden ? "1" : "";
+    const toggle = row.querySelector(".p-toggle");
+    toggle.innerHTML = hidden ? ICON_EYE_OFF : ICON_EYE;
+    toggle.setAttribute("aria-label", I18N.t("hide_aria"));
     renderDecisionGrid();
   }
 
   async function deleteParticipant(name, row) {
-    if (!window.confirm(`Remove ${name} and their marks from this meeting? This affects everyone.`)) return;
+    if (!window.confirm(I18N.t("confirm_delete_participant", { name }))) return;
     row.classList.add("p-deleting");
     try {
       meeting = await WF.api("/organize/" + organizerToken + "/participants/" + encodeURIComponent(name), { method: "DELETE" });
+      hiddenParticipants.delete(name);
       workingDecision = new Set(meeting.decision_cells || []);
       renderAll();
     } catch (e) {
       row.classList.remove("p-deleting");
-      manageErr.textContent = e.message || "Couldn't delete that participant.";
+      manageErr.textContent = e.message || I18N.t("err_delete");
     }
   }
 
   function setDocumentTitle() {
-    document.title = meeting.title + " - Organize - WhenFree";
+    document.title = I18N.t("doc_title_organize", { title: meeting.title });
   }
 
   function hiddenParticipantNames() {
-    const out = [];
-    participantsBody.querySelectorAll('.participant-row[data-hidden="1"] .p-name').forEach((el) => out.push(el.textContent));
-    return out;
+    return [...hiddenParticipants];
   }
 
   function renderDecisionGrid() {
@@ -210,7 +238,7 @@
     if (deleted) return;
     const status = decisionStatus;
     status.style.color = "var(--ink-faint)";
-    status.textContent = "Saving…";
+    status.textContent = I18N.t("saving");
     try {
       meeting = await WF.api("/organize/" + organizerToken + "/decision", {
         method: "POST",
@@ -218,10 +246,10 @@
       });
       workingDecision = new Set(meeting.decision_cells || []);
       renderDecisionGrid();
-      status.textContent = workingDecision.size ? "Decision saved." : "Decision cleared.";
+      status.textContent = workingDecision.size ? I18N.t("saved") : I18N.t("decision_cleared");
     } catch (e) {
       status.style.color = "var(--danger)";
-      status.textContent = e.message || "Couldn't save the decision.";
+      status.textContent = e.message || I18N.t("err_save");
     }
   }
 
@@ -236,7 +264,7 @@
   async function renameMeeting() {
     if (deleted) return;
     const title = renameInput.value.trim();
-    if (!title) { manageErr.textContent = "Meeting name is required."; return; }
+    if (!title) { manageErr.textContent = I18N.t("err_title_required"); return; }
     manageErr.textContent = "";
     const btn = document.getElementById("rename-save");
     btn.disabled = true;
@@ -249,7 +277,7 @@
       setDocumentTitle();
       renameInput.value = meeting.title;
     } catch (e) {
-      manageErr.textContent = e.message || "Couldn't rename the meeting.";
+      manageErr.textContent = e.message || I18N.t("err_rename");
     } finally {
       btn.disabled = false;
     }
@@ -257,7 +285,7 @@
 
   async function rotateToken() {
     if (deleted) return;
-    if (!window.confirm("Regenerate the organizer link? The current link stops working immediately.")) return;
+    if (!window.confirm(I18N.t("confirm_rotate"))) return;
     manageErr.textContent = "";
     try {
       const res = await WF.api("/organize/" + organizerToken + "/rotate-token", { method: "POST" });
@@ -265,7 +293,7 @@
       history.replaceState(null, "", "/organize/" + organizerToken);
       organizerLinkInput.value = window.location.origin + "/organize/" + organizerToken;
     } catch (e) {
-      manageErr.textContent = e.message || "Couldn't regenerate the link.";
+      manageErr.textContent = e.message || I18N.t("err_rotate");
     }
   }
 
@@ -273,17 +301,17 @@
     if (deleted) return;
     const code = document.getElementById("delete-confirm-input").value.trim().toUpperCase();
     if (code !== meeting.id) {
-      manageErr.textContent = "That code doesn't match. Type " + meeting.id + " to confirm.";
+      manageErr.textContent = I18N.t("err_code_mismatch", { code: meeting.id });
       return;
     }
-    if (!window.confirm("Delete this meeting for everyone? Their availability and the decision are removed. This cannot be undone.")) return;
+    if (!window.confirm(I18N.t("confirm_delete_meeting"))) return;
     try {
       await WF.api("/organize/" + organizerToken, { method: "DELETE" });
       deleted = true;
-      document.getElementById("page").querySelectorAll("input, button").forEach((el) => { el.disabled = true; });
+      document.getElementById("page").querySelectorAll("input, button:not(.lang-btn)").forEach((el) => { el.disabled = true; });
       deletedBanner.hidden = false;
     } catch (e) {
-      manageErr.textContent = e.message || "Couldn't delete the meeting.";
+      manageErr.textContent = e.message || I18N.t("err_delete");
     }
   }
 

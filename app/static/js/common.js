@@ -2,8 +2,7 @@ window.WF = (function () {
   "use strict";
 
   const API_BASE = "/api";
-  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const MONTH = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const I18N = window.WF_I18N;
 
   // Grid geometry - keep these numbers in sync with the CSS custom
   // properties (--cell-h, --cell-w, --header-h, --group-gap) in styles.css.
@@ -16,23 +15,35 @@ window.WF = (function () {
   function isoDate(y, m, d) {
     return y + "-" + String(m + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
   }
+  // Locale-aware date/time formatting via Intl.DateTimeFormat: English is
+  // 12-hour ("3 PM", "Jul 15"), German 24-hour ("09:00", "15. Jul").
   function fmtDateLabel(iso) {
     const d = new Date(iso + "T00:00:00");
-    return { dow: DOW[d.getDay()], label: MONTH[d.getMonth()].slice(0, 3) + " " + d.getDate() };
+    const label = new Intl.DateTimeFormat(I18N.locale, { day: "numeric", month: "short" }).format(d).replace(/\.$/, "");
+    return {
+      dow: new Intl.DateTimeFormat(I18N.locale, { weekday: "short" }).format(d),
+      label,
+    };
   }
-  // Whole-hour label, e.g. 540 -> "9 AM", 0/1440 -> "12 AM".
+  // Weekday the locale's week starts on: Monday in German calendars, Sunday
+  // in English ones (0 = Sunday, Date.getDay() convention).
+  function weekStartDow() { return I18N.locale === "de" ? 1 : 0; }
+  // Short weekday name; dowIndex is 0=Sun..6=Sat.
+  function dowShort(dowIndex) {
+    const d = new Date(2000, 0, 2 + dowIndex); // 2000-01-02 was a Sunday
+    return new Intl.DateTimeFormat(I18N.locale, { weekday: "short" }).format(d);
+  }
   function fmtHourLabel(mins) {
-    let h = Math.round(mins / 60) % 24;
-    const ap = h >= 12 && h !== 24 ? "PM" : "AM";
-    let h12 = h % 12; if (h12 === 0) h12 = 12;
-    return h12 + " " + ap;
+    const h = Math.round(mins / 60) % 24;
+    // Top-of-hour labels drop ":00" in 12-hour English ("3 PM") but keep it
+    // in 24-hour German ("09:00").
+    const opts = I18N.locale === "de" ? { hour: "numeric", minute: "2-digit" } : { hour: "numeric" };
+    return new Intl.DateTimeFormat(I18N.locale, opts).format(new Date(2000, 0, 1, h, 0));
   }
   function fmtTimeLabel(mins) {
     const h24 = Math.floor(mins / 60) % 24;
     const m = mins % 60;
-    const ap = h24 >= 12 ? "PM" : "AM";
-    let h12 = h24 % 12; if (h12 === 0) h12 = 12;
-    return h12 + (m ? ":" + String(m).padStart(2, "0") : "") + " " + ap;
+    return new Intl.DateTimeFormat(I18N.locale, { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, h24, m));
   }
   function todayISO() {
     const d = new Date();
@@ -253,7 +264,7 @@ window.WF = (function () {
       }
       if (ranges.length) parts.push(fmtDateLabel(iso).label + ", " + ranges.join(", "));
     });
-    return parts.join(" and ");
+    return parts.join(I18N.t("decision_join"));
   }
 
   // ---------- shared heatmap grid ----------
@@ -452,14 +463,14 @@ window.WF = (function () {
         (_, i) => (highestCount ? i / highestCount : 0)
       );
       legend.innerHTML =
-        `0/${participantCount} free` +
+        `0/${participantCount} ${I18N.t("legend_free")}` +
         `<span class="legend-scale" style="width:${legendOpacities.length * 25 + "px"};">${legendOpacities.map(t => `<div style="background:var(--hot);opacity:${Math.pow(t, 1.5)}"></div>`).join("")}</span>` +
-        `${highestCount}/${participantCount} free`;
+        `${highestCount}/${participantCount} ${I18N.t("legend_free")}`;
       if (decision && decision.size) {
-        legend.innerHTML += `<span class="swatch swatch-decided" style="margin-left:12px;"></span>decided`;
+        legend.innerHTML += `<span class="swatch swatch-decided" style="margin-left:12px;"></span>${I18N.t("legend_decided")}`;
       }
     } else {
-      legend.innerHTML = `<span class="swatch" style="background:var(--cold)"></span>occupied<span class="swatch" style="background:var(--amber);margin-left:12px;"></span>free`;
+      legend.innerHTML = `<span class="swatch" style="background:var(--cold)"></span>${I18N.t("legend_occupied")}<span class="swatch" style="background:var(--amber);margin-left:12px;"></span>${I18N.t("legend_free")}`;
     }
     container.appendChild(legend);
 
@@ -476,7 +487,7 @@ window.WF = (function () {
       if (c === 0) { tipEl.style.display = "none"; return; }
       const visibleNames = meeting.participants.filter((n) => !hiddenNames.has(n));
       const names = visibleNames.filter((n) => (meeting.availability[n] || []).includes(key));
-      tipEl.innerHTML = `<b>${c} ${c === 1 ? "person" : "people"}</b><br>${visibleNames
+      tipEl.innerHTML = `<b>${c} ${I18N.t(c === 1 ? "person_one" : "person_many")}</b><br>${visibleNames
         .map((name) => `<div class="${names.includes(name) ? "" : "unavailable"}">${escapeHtml(name)}</div>`)
         .join("")}`;
       tipEl.style.left = Math.min(x + 12, window.innerWidth - 240) + "px";
@@ -494,8 +505,9 @@ window.WF = (function () {
   }
 
   return {
-    DOW, MONTH, GRID,
+    GRID,
     escapeHtml, isoDate, fmtDateLabel, fmtHourLabel, todayISO, meetingUrl,
+    weekStartDow, dowShort,
     api, groupConsecutiveDates, enableRubberBand,
     decisionEdges, formatDecision, renderHeatmap,
   };

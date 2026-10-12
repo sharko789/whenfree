@@ -1,6 +1,7 @@
 (function () {
   "use strict";
   const WF = window.WF;
+  const I18N = window.WF_I18N;
 
   const pathMatch = window.location.pathname.match(/^\/meeting\/([A-Za-z0-9]+)\/?$/);
   if (!pathMatch) { window.location.href = "/"; return; }
@@ -21,6 +22,7 @@
   const tipEl = document.getElementById("tip");
 
   async function init() {
+    await I18N.ready;
     try {
       meeting = await WF.api("/meetings/" + meetingId);
     } catch (e) {
@@ -28,14 +30,17 @@
       return;
     }
     titleText.textContent = meeting.title;
-    document.title = meeting.title + " - WhenFree";
+    // Detach from static i18n: applyStatic() would otherwise clobber the
+    // real title with the "loading" placeholder on every locale switch.
+    titleText.removeAttribute("data-i18n");
+    setDocumentTitle();
     const link = WF.meetingUrl(meeting.id);
     shareLinkInput.value = link;
     document.getElementById("copy-link").addEventListener("click", (e) => {
       shareLinkInput.select();
       navigator.clipboard && navigator.clipboard.writeText(link);
-      e.target.textContent = "Copied";
-      setTimeout(() => { e.target.textContent = "Copy link"; }, 1200);
+      e.target.textContent = I18N.t("copied");
+      setTimeout(() => { e.target.textContent = I18N.t("copy_link"); }, 1200);
     });
 
     renderParticipantList();
@@ -43,16 +48,27 @@
     renderOwnPanelNameForm();
 
     window.addEventListener("resize", renderParticipantList);
+    document.addEventListener("wf:locale", () => {
+      if (!meeting) return;
+      setDocumentTitle();
+      renderParticipantList();
+      renderGroupPanel();
+      if (currentName) renderOwnPanelGrid(); else renderOwnPanelNameForm();
+    });
+  }
+
+  function setDocumentTitle() {
+    document.title = I18N.t("doc_title_meeting", { title: meeting.title });
   }
 
   function renderParticipantList() {
     if (meeting.participants.length === 0) {
-      participantListEl.textContent = "No one has added their availability yet — be the first.";
+      participantListEl.textContent = I18N.t("no_participants");
       return;
     }
 
     const total = meeting.participants.length;
-    const label = `${total} ${total === 1 ? "person" : "people"} so far:`;
+    const label = I18N.t("persons_sofar", { n: total, person: I18N.t(total === 1 ? "person_one" : "person_many") });
     let names = meeting.participants.map(WF.escapeHtml);
     let hiddenNames = [];
 
@@ -62,7 +78,7 @@
       hiddenNames.unshift(names.pop());
       const remaining = total - names.length;
       participantListEl.innerHTML =
-        `<b>${label}</b> ${names.join(", ")}${remaining ? ` <span class="others-tip">and ${remaining} others</span>` : ""}`;
+        `<b>${label}</b> ${names.join(", ")}${remaining ? ` <span class="others-tip">${I18N.t("and_others", { n: remaining })}</span>` : ""}`;
     }
 
     if (participantListController) participantListController.abort();
@@ -89,21 +105,21 @@
     ownPanelBody.classList.add("own-panel-body-login");
 
     const nameLabel = document.createElement("label");
-    nameLabel.textContent = "Your name";
+    nameLabel.textContent = I18N.t("your_name");
     nameLabel.setAttribute("for", "own-name-input");
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.id = "own-name-input";
-    nameInput.placeholder = "Type your name";
+    nameInput.placeholder = I18N.t("type_your_name");
     nameInput.value = currentName;
 
     const passLabel = document.createElement("label");
-    passLabel.textContent = "Password (optional)";
+    passLabel.textContent = I18N.t("password_optional");
     passLabel.setAttribute("for", "own-password-input");
     const passInput = document.createElement("input");
     passInput.type = "password";
     passInput.id = "own-password-input";
-    passInput.placeholder = "Only if you want to protect this name";
+    passInput.placeholder = I18N.t("password_ph");
 
     const err = document.createElement("div");
     err.className = "err";
@@ -111,14 +127,14 @@
     const btn = document.createElement("button");
     btn.className = "btn-primary btn-block";
     btn.type = "button";
-    btn.textContent = "Continue";
+    btn.textContent = I18N.t("continue_btn");
 
     ownPanelBody.append(nameLabel, nameInput, passLabel, passInput, err, btn);
 
     async function submit() {
       const name = nameInput.value.trim();
       const password = passInput.value;
-      if (!name) { err.textContent = "Enter your name to continue."; return; }
+      if (!name) { err.textContent = I18N.t("err_enter_name"); return; }
 
       const existingCells = meeting.availability[name];
       if (existingCells === undefined) {
@@ -135,7 +151,7 @@
       // over the grid. Re-saving the unchanged cells doubles as a check,
       // since the server rejects a mismatched password without writing.
       btn.disabled = true;
-      err.textContent = "Checking…";
+      err.textContent = I18N.t("checking");
       try {
         meeting = await WF.api("/meetings/" + meetingId + "/availability", {
           method: "POST",
@@ -148,7 +164,7 @@
         renderParticipantList();
         renderGroupPanel();
       } catch (e) {
-        err.textContent = e.message || "Couldn't verify that name.";
+        err.textContent = e.message || I18N.t("err_verify_name");
       } finally {
         btn.disabled = false;
       }
@@ -172,13 +188,13 @@
 
     const intro = document.createElement("div");
     intro.className = "participant-list";
-    intro.innerHTML = "Editing availability for <b>" + WF.escapeHtml(currentName) + "</b>";
+    intro.innerHTML = I18N.t("editing_for", { name: WF.escapeHtml(currentName) });
 
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "back-link";
     delBtn.style.color = "var(--danger)";
-    delBtn.textContent = "Delete my entry";
+    delBtn.textContent = I18N.t("delete_my_entry");
 
     introRow.append(intro, delBtn);
 
@@ -226,7 +242,7 @@
     const notice = document.getElementById("decision-notice");
     const set = new Set(meeting.decision_cells || []);
     if (!set.size) { notice.hidden = true; return; }
-    notice.innerHTML = `<b>Meeting is set for</b> ${WF.escapeHtml(WF.formatDecision(meeting, set))}`;
+    notice.innerHTML = `<b>${I18N.t("meeting_set_for")}</b> ${WF.escapeHtml(WF.formatDecision(meeting, set))}`;
     notice.hidden = false;
   }
 
@@ -235,9 +251,9 @@
   // for everyone - that's the point of self-service deletion, not
   // anonymization). The password field from the identity step is reused.
   async function deleteMyEntry(btn, status) {
-    if (!window.confirm("This removes your name and marks from the group. It cannot be undone.")) return;
+    if (!window.confirm(I18N.t("confirm_delete_own"))) return;
     btn.disabled = true;
-    if (status) { status.style.color = "var(--ink-faint)"; status.textContent = "Deleting…"; }
+    if (status) { status.style.color = "var(--ink-faint)"; status.textContent = I18N.t("deleting"); }
     try {
       meeting = await WF.api("/meetings/" + meetingId + "/availability", {
         method: "DELETE",
@@ -251,7 +267,7 @@
       renderGroupPanel();
       renderOwnPanelNameForm();
     } catch (e) {
-      if (status) { status.style.color = "var(--danger)"; status.textContent = e.message || "Couldn't delete. Try again."; }
+      if (status) { status.style.color = "var(--danger)"; status.textContent = e.message || I18N.t("err_delete"); }
       btn.disabled = false;
     }
   }
@@ -259,17 +275,17 @@
   /* ---------- saving ---------- */
   async function saveAvailability() {
     const status = document.getElementById("save-status");
-    if (status) { status.style.color = "var(--ink-faint)"; status.textContent = "Saving…"; }
+    if (status) { status.style.color = "var(--ink-faint)"; status.textContent = I18N.t("saving"); }
     try {
       meeting = await WF.api("/meetings/" + meetingId + "/availability", {
         method: "POST",
         body: JSON.stringify({ name: currentName, password: currentPassword, cells: Array.from(selectedCells) }),
       });
-      if (status) status.textContent = "Saved.";
+      if (status) status.textContent = I18N.t("saved");
       renderParticipantList();
       renderGroupPanel();
     } catch (e) {
-      if (status) { status.style.color = "var(--danger)"; status.textContent = e.message || "Couldn't save. Try again."; }
+      if (status) { status.style.color = "var(--danger)"; status.textContent = e.message || I18N.t("err_save"); }
     }
   }
 

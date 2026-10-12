@@ -7,45 +7,59 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/styles.css">
+<script>
+  // Keep the page hidden until i18n.js has applied the saved/browser locale,
+  // so the English fallback text never flashes on load. i18n.js removes the
+  // attribute once ready; the timeout is a safety net if i18n.js fails.
+  document.documentElement.setAttribute("data-i18n-loading", "");
+  setTimeout(function () { document.documentElement.removeAttribute("data-i18n-loading"); }, 1500);
+</script>
 </head>
 <body>
 <div id="page" class="page-narrow">
 
   <div class="topbar">
     <a class="brand" href="/"><div class="mark"></div><h1>When<span>Free</span></h1></a>
-    <a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a>
+    <div class="topbar-right">
+      <div class="lang-switch" role="group">
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+        <button class="lang-btn" data-lang="de" type="button">DE</button>
+      </div>
+      <a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a>
+    </div>
   </div>
 
   <div class="card cal-card">
-    <h3><span class="eyebrow-num">New meeting</span></h3>
+    <h3><span class="eyebrow-num" data-i18n="new_meeting">New meeting</span></h3>
 
-    <label for="c-title">Meeting name</label>
-    <input type="text" id="c-title" placeholder="e.g. Team retro, Camping trip" required>
+    <label for="c-title" data-i18n="meeting_title">Meeting title</label>
+    <input type="text" id="c-title" placeholder="e.g. Team retro, Camping trip" data-i18n-ph="meeting_title_ph" required>
 
-    <label>Dates to consider</label>
+    <label data-i18n="dates_to_consider">Dates to consider</label>
     <div class="cal-header">
-      <button class="cal-nav" id="cal-prev" type="button" aria-label="Back one week">&larr;</button>
+      <button class="cal-nav" id="cal-prev" type="button" aria-label="Back one week" data-i18n-aria="cal_prev_aria">&uarr;</button>
       <div class="cal-month" id="cal-month-label"></div>
-      <button class="cal-nav" id="cal-next" type="button" aria-label="Forward one week">&rarr;</button>
+      <button class="cal-nav" id="cal-next" type="button" aria-label="Forward one week" data-i18n-aria="cal_next_aria">&darr;</button>
     </div>
     <div id="cal-slot"></div>
-    <div class="cal-hint">Click a date, or click and drag across several, to add or remove them.</div>
+    <div class="cal-hint" data-i18n="cal_hint">Click a date, or click and drag across several, to add or remove them.</div>
 
     <div class="row2">
       <div>
-        <label for="c-start">Earliest time</label>
+        <label for="c-start" data-i18n="earliest_time">Earliest time</label>
         <input type="time" id="c-start" step="900" value="09:00">
       </div>
       <div>
-        <label for="c-end">Latest time</label>
+        <label for="c-end" data-i18n="latest_time">Latest time</label>
         <input type="time" id="c-end" step="900" value="18:00">
       </div>
     </div>
 
     <div class="err" id="c-err"></div>
-    <button class="btn-primary btn-block" id="c-submit">Create meeting &amp; get a link</button>
+    <button class="btn-primary btn-block" id="c-submit" data-i18n="create_meeting">Create meeting &amp; get a link</button>
   </div>
 </div>
+<script src="/js/i18n.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/index.js"></script>
 </body>

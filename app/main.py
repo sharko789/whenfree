@@ -221,7 +221,7 @@ def meeting_payload(conn: sqlite3.Connection, meeting_id: str) -> dict:
 def create_meeting(payload: MeetingCreate):
     title = payload.title.strip()
     if not title:
-        raise HTTPException(400, "Meeting name is required.")
+        raise HTTPException(400, "Meeting title is required.")
     if payload.end_min <= payload.start_min:
         raise HTTPException(400, "End time must be after start time.")
     if payload.start_min % 15 or payload.end_min % 15:
@@ -365,7 +365,7 @@ def organize_meeting(token: str):
 def organize_rename_meeting(token: str, payload: MeetingUpdate):
     title = payload.title.strip()
     if not title:
-        raise HTTPException(400, "Meeting name is required.")
+        raise HTTPException(400, "Meeting title is required.")
     with get_conn() as conn:
         meeting_id = organizer_meeting_id(conn, token)
         conn.execute("UPDATE meetings SET title=? WHERE id=?", (title, meeting_id))

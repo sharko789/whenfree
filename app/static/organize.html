@@ -9,50 +9,63 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/styles.css">
+<script>
+  // Keep the page hidden until i18n.js has applied the saved/browser locale,
+  // so the English fallback text never flashes on load. i18n.js removes the
+  // attribute once ready; the timeout is a safety net if i18n.js fails.
+  document.documentElement.setAttribute("data-i18n-loading", "");
+  setTimeout(function () { document.documentElement.removeAttribute("data-i18n-loading"); }, 1500);
+</script>
 </head>
 <body>
 <div id="page">
 
   <div class="topbar">
     <a class="brand" href="/"><div class="mark"></div><h1>When<span>Free</span></h1></a>
-    <a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a>
+    <div class="topbar-right">
+      <div class="lang-switch" role="group">
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+        <button class="lang-btn" data-lang="de" type="button">DE</button>
+      </div>
+      <a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a>
+    </div>
   </div>
 
   <div class="meeting-header">
-    <div class="meeting-title"><h2 id="meeting-title-text">Loading…</h2></div>
+    <div class="meeting-title"><h2 id="meeting-title-text" data-i18n="loading">Loading…</h2></div>
   </div>
 
   <div class="links-section">
     <div class="link-block">
-      <label for="participant-link">Participant link</label>
+      <label for="participant-link" data-i18n="participant_link_label">Participant link</label>
       <div class="share-link-row">
         <input type="text" id="participant-link" class="mono" readonly value="">
-        <button class="btn-primary" id="copy-participant-link" type="button">Copy link</button>
-        <button class="btn-ghost" id="open-participant-link" type="button">Open</button>
+        <button class="btn-primary" id="copy-participant-link" type="button" data-i18n="copy_link">Copy link</button>
+        <button class="btn-ghost" id="open-participant-link" type="button" data-i18n="open">Open</button>
       </div>
     </div>
     <div class="link-block secondary">
-      <label for="organizer-link">Organizer link</label>
+      <label for="organizer-link" data-i18n="organizer_link_label">Organizer link</label>
       <div class="share-link-row">
         <input type="text" id="organizer-link" class="mono" readonly value="">
-        <button class="btn-ghost" id="copy-organizer-link" type="button">Copy link</button>
-        <button class="btn-ghost" id="rotate-token" type="button">Regenerate</button>
+        <button class="btn-ghost" id="copy-organizer-link" type="button" data-i18n="copy_link">Copy link</button>
+        <button class="btn-ghost" id="rotate-token" type="button" data-i18n="regenerate">Regenerate</button>
       </div>
-      <div class="link-warning">Anyone with this link can edit this meeting and delete it.</div>
+      <div class="link-warning" data-i18n="link_warning">Anyone with this link can edit this meeting and delete it.</div>
     </div>
   </div>
 
   <div class="panels">
     <section class="panel panel-own">
-      <h3>Participants</h3>
-      <div id="participants-body"><div class="loading">Loading…</div></div>
+      <h3 data-i18n="participants">Participants</h3>
+      <div id="participants-body"><div class="loading" data-i18n="loading">Loading…</div></div>
     </section>
     <section class="panel panel-group">
-      <h3>Group availability</h3>
+      <h3 data-i18n="group_availability">Group availability</h3>
       <div id="group-panel-body"></div>
       <div class="decision-actions">
-        <button class="btn-primary" id="save-decision" type="button">Save decision</button>
-        <button class="btn-ghost" id="clear-decision" type="button">Clear decision</button>
+        <button class="btn-primary" id="save-decision" type="button" data-i18n="save_decision">Save decision</button>
+        <button class="btn-ghost" id="clear-decision" type="button" data-i18n="clear_decision">Clear decision</button>
         <span class="hint" id="decision-status"></span>
       </div>
     </section>
@@ -61,37 +74,38 @@
   <hr class="section-divider">
 
   <div class="manage-section">
-    <h3>Manage meeting</h3>
+    <h3 data-i18n="manage_meeting">Manage meeting</h3>
     <div class="settings">
       <div class="setting-row">
-        <label for="rename-input">Meeting name</label>
+        <label for="rename-input" data-i18n="meeting_title">Meeting title</label>
         <div class="setting-fields">
-          <input type="text" id="rename-input" placeholder="Meeting name" maxlength="200">
-          <button class="btn-ghost" id="rename-save" type="button">Rename</button>
+          <input type="text" id="rename-input" placeholder="Title" data-i18n-ph="meeting_title" maxlength="200">
+          <button class="btn-ghost" id="rename-save" type="button" data-i18n="rename">Rename</button>
         </div>
       </div>
     </div>
     <hr class="danger-divider">
     <div class="danger-zone">
-      <div class="danger-title">Delete this meeting</div>
-      <div class="danger-hint">Removes the meeting and every participant's marks. Type <b class="mono" id="delete-code-label"></b> to confirm.</div>
+      <div class="danger-title" data-i18n="delete_this_meeting">Delete this meeting</div>
+      <div class="danger-hint" data-i18n-html="delete_hint">Removes the meeting and every participant's marks. Type <b class="mono" id="delete-code-label"></b> to confirm.</div>
       <div class="setting-row">
-        <label for="delete-confirm-input">Meeting code</label>
+        <label for="delete-confirm-input" data-i18n="meeting_code">Meeting code</label>
         <div class="setting-fields">
-          <input type="text" id="delete-confirm-input" class="mono" placeholder="Meeting code" maxlength="200" autocomplete="off">
-          <button class="btn-danger" id="delete-meeting" type="button">Delete meeting</button>
+          <input type="text" id="delete-confirm-input" class="mono" placeholder="Meeting code" data-i18n-ph="meeting_code" maxlength="200" autocomplete="off">
+          <button class="btn-danger" id="delete-meeting" type="button" data-i18n="delete_meeting_btn">Delete meeting</button>
         </div>
       </div>
       <div class="err" id="manage-err"></div>
     </div>
   </div>
 
-  <div class="deleted-banner" id="deleted-banner" hidden>
+  <div class="deleted-banner" id="deleted-banner" hidden data-i18n-html="deleted_banner">
     This meeting was deleted. <a href="/">Create a new one</a>.
   </div>
 </div>
 <div class="tip" id="tip"></div>
 
+<script src="/js/i18n.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/organize.js"></script>
 </body>

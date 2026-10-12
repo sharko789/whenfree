@@ -1,11 +1,15 @@
 (function () {
   "use strict";
   const WF = window.WF;
+  const I18N = window.WF_I18N;
   const WEEK_COUNT = 6;
 
-  function startOfWeek(d) {
+  // Start of the week containing d, where the week begins on startDow
+  // (0 = Sunday, 1 = Monday; Date.getDay() convention).
+  function startOfWeek(d, startDow) {
     const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    copy.setDate(copy.getDate() - copy.getDay());
+    const diff = (copy.getDay() - startDow + 7) % 7;
+    copy.setDate(copy.getDate() - diff);
     return copy;
   }
   // Calendar-day step: fixed 24h ms math drifts across DST transition days
@@ -24,17 +28,28 @@
     if (Number.isNaN(h) || Number.isNaN(m)) return null;
     return h * 60 + m;
   }
+  // "Jul 15 – Aug 4, 2026" / "15. Jul – 4. Aug 2026" - day/month order
+  // differs per locale, so each side is formatted with Intl and composed.
   function fmtRangeLabel(first, last) {
-    const m1 = WF.MONTH[first.getMonth()].slice(0, 3), m2 = WF.MONTH[last.getMonth()].slice(0, 3);
+    const loc = I18N.locale;
+    // German month abbreviations carry a trailing dot ("Jul."); drop it.
+    const m1 = new Intl.DateTimeFormat(loc, { month: "short" }).format(first).replace(/\.$/, "");
+    const m2 = new Intl.DateTimeFormat(loc, { month: "short" }).format(last).replace(/\.$/, "");
     const y1 = first.getFullYear(), y2 = last.getFullYear();
+    if (loc === "de") {
+      if (y1 !== y2) return `${first.getDate()}. ${m1} ${y1} – ${last.getDate()}. ${m2} ${y2}`;
+      if (first.getMonth() !== last.getMonth()) return `${first.getDate()}. ${m1} – ${last.getDate()}. ${m2} ${y1}`;
+      return `${first.getDate()}.–${last.getDate()}. ${m1} ${y1}`;
+    }
     if (y1 !== y2) return `${m1} ${first.getDate()}, ${y1} – ${m2} ${last.getDate()}, ${y2}`;
-    if (m1 !== m2) return `${m1} ${first.getDate()} – ${m2} ${last.getDate()}, ${y1}`;
+    if (first.getMonth() !== last.getMonth()) return `${m1} ${first.getDate()} – ${m2} ${last.getDate()}, ${y1}`;
     return `${m1} ${first.getDate()}–${last.getDate()}, ${y1}`;
   }
 
   const state = {
     createDates: new Set(),
-    weekStart: startOfWeek(new Date()), // Sunday of the first visible week
+    weekStart: startOfWeek(new Date(), WF.weekStartDow()), // start of the first visible week
+    weekOffset: 0, // weeks navigated away from the current week (locale-independent)
   };
   let calRubberBandController = null;
 
@@ -49,6 +64,7 @@
   document.getElementById("cal-next").addEventListener("click", () => shiftWeek(1));
 
   function shiftWeek(delta) {
+    state.weekOffset += delta;
     state.weekStart = addDays(state.weekStart, delta * 7);
     renderCalendar();
   }
@@ -65,11 +81,12 @@
 
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
-    WF.DOW.forEach((d) => {
+    const startDow = WF.weekStartDow();
+    for (let i = 0; i < 7; i++) {
       const th = document.createElement("th");
-      th.textContent = d;
+      th.textContent = WF.dowShort((startDow + i) % 7);
       headRow.appendChild(th);
-    });
+    }
     thead.appendChild(headRow);
     table.appendChild(thead);
 
@@ -111,6 +128,10 @@
         if (sel) state.createDates.add(key); else state.createDates.delete(key);
         cell.classList.toggle("selected", displaySel);
         cell.classList.toggle("selected-preview", preview);
+        cell.classList.toggle("pv-top", preview && edges.top);
+        cell.classList.toggle("pv-right", preview && edges.right);
+        cell.classList.toggle("pv-bottom", preview && edges.bottom);
+        cell.classList.toggle("pv-left", preview && edges.left);
       },
     });
   }
@@ -119,17 +140,22 @@
 
   document.getElementById("c-title").addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
 
-  document.getElementById("c-submit").addEventListener("click", async () => {
+  document.getElementById("c-submit").addEventListener("click", submit);
+
+  async function submit() {
     const title = titleInput.value.trim();
-    if (!title) { errEl.textContent = "Give the meeting a name."; titleInput.focus(); return; }
-    if (state.createDates.size === 0) { errEl.textContent = "Add at least one date."; return; }
+    if (!title) { errEl.textContent = I18N.t("err_title_required"); titleInput.focus(); return; }
+    if (state.createDates.size === 0) { errEl.textContent = I18N.t("err_no_dates"); return; }
 
     const startMin = timeToMin(startInput.value);
     const endMin = timeToMin(endInput.value);
-    if (startMin == null || endMin == null) { errEl.textContent = "Set both times."; return; }
-    if (endMin <= startMin) { errEl.textContent = "Latest time has to be after earliest time."; return; }
+    if (startMin == null || endMin == null) { errEl.textContent = I18N.t("err_both_times"); return; }
+    if (endMin <= startMin) { errEl.textContent = I18N.t("err_end_after"); return; }
+    // Client-side mirror of the server rule (main.py create_meeting); the
+    // server check stays as the source of truth.
+    if (startMin % 15 !== 0 || endMin % 15 !== 0) { errEl.textContent = I18N.t("err_quarter_hour"); return; }
 
-    errEl.textContent = "Creating…";
+    errEl.textContent = I18N.t("creating");
     try {
       const res = await WF.api("/meetings", {
         method: "POST",
@@ -140,7 +166,18 @@
       });
       window.location.href = "/organize/" + res.organize_token;
     } catch (e) {
-      errEl.textContent = e.message || "Something went wrong saving the meeting. Try again.";
+      errEl.textContent = e.message || I18N.t("err_save");
     }
+  }
+
+  // Locale switch: re-derive the week anchor (Sunday vs Monday start) from a
+  // fixed reference (today) plus the user's week offset, then re-render so
+  // header order and month label follow the new locale. Re-anchoring from the
+  // previous weekStart instead drifts: "the week containing X" is not
+  // invertible across week-start days, so the grid slipped back a week on
+  // every EN<->DE round trip.
+  document.addEventListener("wf:locale", () => {
+    state.weekStart = addDays(startOfWeek(new Date(), WF.weekStartDow()), state.weekOffset * 7);
+    renderCalendar();
   });
 })();

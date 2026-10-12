@@ -7,41 +7,55 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/styles.css">
+<script>
+  // Keep the page hidden until i18n.js has applied the saved/browser locale,
+  // so the English fallback text never flashes on load. i18n.js removes the
+  // attribute once ready; the timeout is a safety net if i18n.js fails.
+  document.documentElement.setAttribute("data-i18n-loading", "");
+  setTimeout(function () { document.documentElement.removeAttribute("data-i18n-loading"); }, 1500);
+</script>
 </head>
 <body>
 <div id="page">
 
   <div class="topbar">
     <a class="brand" href="/"><div class="mark"></div><h1>When<span>Free</span></h1></a>
-    <a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a>
+    <div class="topbar-right">
+      <div class="lang-switch" role="group">
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+        <button class="lang-btn" data-lang="de" type="button">DE</button>
+      </div>
+      <a class="topbar-link" href="https://github.com/sharko789/whenfree">GitHub</a>
+    </div>
   </div>
 
   <div class="meeting-header">
-    <div class="meeting-title"><h2 id="meeting-title-text">Loading…</h2></div>
+    <div class="meeting-title"><h2 id="meeting-title-text" data-i18n="loading">Loading…</h2></div>
     <div class="decision-notice" id="decision-notice" hidden></div>
   </div>
 
   <div class="share-row">
-    <label for="share-link">Share this meeting</label>
+    <label for="share-link" data-i18n="share_meeting">Share this meeting</label>
     <div class="share-link-row">
       <input type="text" id="share-link" class="mono" readonly value="">
-      <button class="btn-ghost" id="copy-link" type="button">Copy link</button>
+      <button class="btn-ghost" id="copy-link" type="button" data-i18n="copy_link">Copy link</button>
     </div>
   </div>
 
   <div class="panels">
     <section class="panel panel-own">
-      <h3>Your availability</h3>
-      <div id="own-panel-body"><div class="loading">Loading…</div></div>
+      <h3 data-i18n="your_availability">Your availability</h3>
+      <div id="own-panel-body"><div class="loading" data-i18n="loading">Loading…</div></div>
     </section>
     <section class="panel panel-group">
-      <h3>Group availability</h3>
+      <h3 data-i18n="group_availability">Group availability</h3>
       <div class="participant-list" id="participant-list"></div>
       <div id="group-panel-body"></div>
     </section>
   </div>
 </div>
 <div class="tip" id="tip"></div>
+<script src="/js/i18n.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/meeting.js"></script>
 </body>
